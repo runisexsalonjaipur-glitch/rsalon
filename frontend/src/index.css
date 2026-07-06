@@ -83,7 +83,7 @@
 /* Responsive mobile font size scaling */
 @media (max-width: 640px) {
   html {
-    font-size: 13.5px !important;
+    font-size: 15.5px !important;
   }
 }
 
@@ -91,7 +91,7 @@
    PREMIUM WARM BEIGE/CREAM DESIGN SYSTEM
    ======================================================== */
 html {
-  font-size: 14px; /* Standard balanced viewport size scaling */
+  font-size: 15px; /* Slightly larger for better readability */
 }
 
 /* Snug desktop page margins to avoid wasted space */
