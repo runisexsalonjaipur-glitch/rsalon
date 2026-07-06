@@ -152,6 +152,10 @@ class MockQueryChain {
     return new MockQueryChain(this._modelName, next);
   }
 
+  lean() {
+    return this;
+  }
+
   populate(field) {
     const next = this._promise.then(data => {
       const customers = readJson('Customer');

@@ -517,20 +517,33 @@ export default function Dashboard() {
                         )}
                       </g>
                     ))}
-                  </svg>
 
-                  {/* X-axis date labels */}
-                  <div className="flex" style={{ paddingLeft: `${padL}px`, paddingRight: `${padR}px` }}>
-                    {chartData.map((d, idx) => {
-                      const cw = 100 / chartData.length;
-                      return (
-                        <div key={idx} className="text-center" style={{ width: `${cw}%` }}>
-                          <span className="text-[10px] font-bold text-slate-500">{d.label.split(' ')[0]}</span>
-                          <span className="block text-[9px] text-slate-300 font-semibold">{d.label.split(' ')[1]}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                    {/* X-axis date labels */}
+                    {bars.map((b, idx) => (
+                      <g key={idx}>
+                        <text
+                          x={b.x + b.barW / 2}
+                          y={chartHeight - 16}
+                          textAnchor="middle"
+                          fill="#475569"
+                          fontSize="9.5"
+                          fontWeight="800"
+                        >
+                          {b.label.split(' ')[0]}
+                        </text>
+                        <text
+                          x={b.x + b.barW / 2}
+                          y={chartHeight - 4}
+                          textAnchor="middle"
+                          fill="#94A3B8"
+                          fontSize="8.5"
+                          fontWeight="700"
+                        >
+                          {b.label.split(' ')[1]}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
                 </div>
               </div>
             );
@@ -635,7 +648,7 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 text-xs">
-                    {stats.recentEntries.map((entry) => (
+                    {stats.recentEntries.slice(0, 5).map((entry) => (
                       <tr key={entry._id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="py-3">
                           <p className="font-bold text-slate-800">{entry.customer?.name || 'Walk-in'}</p>
@@ -668,7 +681,7 @@ export default function Dashboard() {
 
               {/* Mobile View List */}
               <div className="block md:hidden space-y-3">
-                {stats.recentEntries.map((entry) => (
+                {stats.recentEntries.slice(0, 5).map((entry) => (
                   <div key={entry._id} className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-2.5">
                     <div className="flex justify-between items-start">
                       <div>
