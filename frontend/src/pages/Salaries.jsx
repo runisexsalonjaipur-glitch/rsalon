@@ -37,12 +37,22 @@ export default function Salaries() {
   // Record payout modal states
   const [showPayModal, setShowPayModal] = useState(false);
   const [payTargetStaff, setPayTargetStaff] = useState(null);
-  const [payMonth, setPayMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  
+  // Calculate default dates
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const firstDay = `${year}-${month}-01`;
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const [payStartDate, setPayStartDate] = useState(firstDay);
+  const [payEndDate, setPayEndDate] = useState(todayStr);
   const [payBase, setPayBase] = useState(0);
   const [payCommission, setPayCommission] = useState(0);
   const [payMethod, setPayMethod] = useState('UPI'); // 'UPI', 'Cash'
   const [payNotes, setPayNotes] = useState('');
   const [payingPayout, setPayingPayout] = useState(false);
+  const [showPaidStylists, setShowPaidStylists] = useState(false);
 
   const role = localStorage.getItem('role');
   const isSuperAdmin = role === 'super_admin';
@@ -141,11 +151,14 @@ export default function Salaries() {
     try {
       setPayingPayout(true);
       const totalPaid = Number(payBase) + Number(payCommission);
+      const monthForPayout = payStartDate.slice(0, 7); // extract YYYY-MM
       await apiCall('/salaries/payout', {
         method: 'POST',
         body: {
           staffId: payTargetStaff._id,
-          month: payMonth,
+          month: monthForPayout,
+          startDate: payStartDate,
+          endDate: payEndDate,
           baseSalary: Number(payBase),
           commission: Number(payCommission),
           totalPaid,
@@ -263,6 +276,8 @@ export default function Salaries() {
 
   const filteredHistory = payoutHistory.filter(p => !historyMonthFilter || p.month === historyMonthFilter);
 
+  const visibleStaffPayouts = staffPayouts.filter(st => showPaidStylists || !st.isPaid);
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -335,9 +350,20 @@ export default function Salaries() {
 
           {/* Active Payroll: Desktop View Table */}
           <div className="hidden md:block bg-white rounded-[28px] border border-slate-100/60 shadow-soft overflow-hidden">
-            <div className="p-6 border-b border-slate-50">
-              <h3 className="font-bold text-slate-800 text-sm">Staff Compensation Ledger</h3>
-              <p className="text-xs text-slate-400">Configure parameters and record payroll payouts per stylist</p>
+            <div className="p-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm">Staff Compensation Ledger</h3>
+                <p className="text-xs text-slate-400">Configure parameters and record payroll payouts per stylist</p>
+              </div>
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-650 cursor-pointer bg-slate-50 hover:bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200/60 select-none transition">
+                <input
+                  type="checkbox"
+                  checked={showPaidStylists}
+                  onChange={(e) => setShowPaidStylists(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded text-accent focus:ring-accent border-slate-350 cursor-pointer"
+                />
+                <span>Show Paid Stylists</span>
+              </label>
             </div>
 
             <div className="overflow-x-auto">
@@ -357,7 +383,7 @@ export default function Salaries() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {staffPayouts.map(st => {
+                  {visibleStaffPayouts.map(st => {
                     const edits = salaryEdits[st._id] || { salary: 0, commission: 0 };
                     return (
                       <tr key={st._id} className="hover:bg-slate-50/50 transition-colors">
@@ -446,10 +472,18 @@ export default function Salaries() {
                             ) : (
                               <button
                                 onClick={() => {
+                                  const now = new Date();
+                                  const year = now.getFullYear();
+                                  const month = String(now.getMonth() + 1).padStart(2, '0');
+                                  const fd = `${year}-${month}-01`;
+                                  const td = now.toISOString().slice(0, 10);
+
                                   setPayTargetStaff(st);
                                   setPayBase(st.suggestedFixedBase || st.salary || 0);
                                   setPayCommission(st.commissionEarned || 0);
-                                  setPayNotes(`Salary and commission payment for month`);
+                                  setPayStartDate(fd);
+                                  setPayEndDate(td);
+                                  setPayNotes(`Salary and commission payment`);
                                   setShowPayModal(true);
                                 }}
                                 className="btn-primary !py-1.5 !px-3 text-[10px] font-bold flex items-center gap-1 hover:shadow-sm"
@@ -469,7 +503,7 @@ export default function Salaries() {
 
           {/* Active Payroll: Mobile Responsive Cards List */}
           <div className="md:hidden space-y-4">
-            {staffPayouts.map(st => {
+            {visibleStaffPayouts.map(st => {
               const edits = salaryEdits[st._id] || { salary: 0, commission: 0 };
               return (
                 <div key={st._id} className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-soft space-y-4 flex flex-col justify-between">
@@ -494,10 +528,18 @@ export default function Salaries() {
                       ) : (
                         <button
                           onClick={() => {
+                            const now = new Date();
+                            const year = now.getFullYear();
+                            const month = String(now.getMonth() + 1).padStart(2, '0');
+                            const fd = `${year}-${month}-01`;
+                            const td = now.toISOString().slice(0, 10);
+
                             setPayTargetStaff(st);
                             setPayBase(st.suggestedFixedBase || st.salary || 0);
                             setPayCommission(st.commissionEarned || 0);
-                            setPayNotes(`Salary and commission payment for month`);
+                            setPayStartDate(fd);
+                            setPayEndDate(td);
+                            setPayNotes(`Salary and commission payment`);
                             setShowPayModal(true);
                           }}
                           className="btn-primary !py-1.5 !px-3 text-[10px] font-bold flex items-center gap-1"
@@ -814,18 +856,32 @@ export default function Salaries() {
                 </span>
               </div>
 
-              {/* Month Period */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" /> Target Month Period
-                </label>
-                <input
-                  type="month"
-                  value={payMonth}
-                  onChange={(e) => setPayMonth(e.target.value)}
-                  className="form-input text-xs bg-white font-bold"
-                  required
-                />
+              {/* Billing Period Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" /> Start Cycle Date
+                  </label>
+                  <input
+                    type="date"
+                    value={payStartDate}
+                    onChange={(e) => setPayStartDate(e.target.value)}
+                    className="form-input text-xs bg-white font-bold"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" /> End Cycle Date
+                  </label>
+                  <input
+                    type="date"
+                    value={payEndDate}
+                    onChange={(e) => setPayEndDate(e.target.value)}
+                    className="form-input text-xs bg-white font-bold"
+                    required
+                  />
+                </div>
               </div>
 
               {/* Salary Components */}
