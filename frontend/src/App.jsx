@@ -18,7 +18,8 @@ import {
   Bell,
   Coins,
   Sun,
-  Moon
+  Moon,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -33,6 +34,8 @@ import SettingsPage from './pages/Settings';
 import apiCall from './api';
 import logoImg from './assets/logo.png';
 import Salaries from './pages/Salaries';
+import StaffReport from './pages/StaffReport';
+import Attendance from './pages/Attendance';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -88,6 +91,8 @@ const DashboardLayout = ({ children }) => {
     { name: 'Customer History', path: '/customer-history', icon: History, roles: ['admin', 'super_admin'] },
     { name: 'Services', path: '/services', icon: Scissors, roles: ['admin', 'super_admin'] },
     { name: 'Staff', path: '/staff', icon: Users, roles: ['admin', 'super_admin'] },
+    { name: 'Staff Report', path: '/staff-report', icon: ScissorsLineDashed, roles: ['admin', 'super_admin'] },
+    { name: 'Attendance', path: '/attendance', icon: Clock, roles: ['super_admin'] },
     { name: 'Reports', path: '/reports', icon: BarChart3, roles: ['super_admin'] },
     { name: 'Settings', path: '/settings', icon: SettingsIcon, roles: ['super_admin'] },
     { name: 'Salaries', path: '/salaries', icon: Coins, roles: ['super_admin'] },
@@ -379,6 +384,22 @@ export default function App() {
           <ProtectedRoute allowedRoles={['super_admin']}>
             <DashboardLayout>
               <Salaries />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/staff-report" element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <DashboardLayout>
+              <StaffReport />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/attendance" element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <DashboardLayout>
+              <Attendance />
             </DashboardLayout>
           </ProtectedRoute>
         } />

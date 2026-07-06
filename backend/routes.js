@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const router = express.Router();
-const { Staff, Service, Customer, Entry, Settings } = require('./models');
+const { Staff, Service, Customer, Entry, Settings, Attendance } = require('./models');
 const { JWT_SECRET, requireSuperAdmin, requireAdminOrSuperAdmin } = require('./auth');
 
 // Helper to get date ranges
@@ -687,15 +687,154 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
 
     const averageBill = customerCount > 0 ? Math.round(revenue / customerCount) : 0;
 
+    // Fetch attendance stats for the date range
+    const startStr = range.start.toISOString().slice(0, 10);
+    const endStr = range.end.toISOString().slice(0, 10);
+    const attendanceRecords = await Attendance.find({
+      date: { $gte: startStr, $lte: endStr }
+    });
+
+    const attendanceSummary = {};
+    attendanceRecords.forEach(rec => {
+      const sId = rec.staff.toString();
+      if (!attendanceSummary[sId]) {
+        attendanceSummary[sId] = { Present: 0, Absent: 0, Leave: 0 };
+      }
+      attendanceSummary[sId][rec.status] = (attendanceSummary[sId][rec.status] || 0) + 1;
+    });
+
     res.json({
       summary: { revenue, customerCount, averageBill, discountTotal, dueTotal, productCostTotal, payments: { cash, upi, card } },
       staffPerformance: Object.values(staffStats).sort((a, b) => b.revenue - a.revenue),
       serviceSales: Object.values(serviceStats).sort((a, b) => b.count - a.count),
-      chartData: Object.values(dailyStats)
+      chartData: Object.values(dailyStats),
+      attendanceSummary
     });
 
   } catch (error) {
     res.status(500).json({ message: 'Failed to compile report', error: error.message });
+  }
+});
+
+// --- ATTENDANCE SYSTEM ---
+router.post('/attendance', requireSuperAdmin, async (req, res) => {
+  try {
+    const { staffId, date, status, inTime, outTime, notes } = req.body;
+    if (!staffId || !date || !status) {
+      return res.status(400).json({ message: 'Staff ID, date, and status are required' });
+    }
+
+    let record = await Attendance.findOne({ staff: staffId, date });
+    if (record) {
+      record.status = status;
+      record.inTime = inTime || '09:30 AM';
+      record.outTime = outTime || '07:30 PM';
+      record.notes = notes || '';
+    } else {
+      record = new Attendance({
+        staff: staffId,
+        date,
+        status,
+        inTime: inTime || '09:30 AM',
+        outTime: outTime || '07:30 PM',
+        notes: notes || ''
+      });
+    }
+    await record.save();
+    res.json(record);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to save attendance record', error: error.message });
+  }
+});
+
+router.get('/attendance', requireAdminOrSuperAdmin, async (req, res) => {
+  try {
+    const { date, month } = req.query;
+    const query = {};
+    if (date) {
+      query.date = date;
+    } else if (month) {
+      query.date = new RegExp(`^${month}`);
+    }
+
+    const records = await Attendance.find(query);
+    res.json(records);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch attendance logs', error: error.message });
+  }
+});
+
+// --- DETAILED STAFF WORK REPORT ---
+router.get('/reports/staff/:staffId', requireAdminOrSuperAdmin, async (req, res) => {
+  try {
+    const { staffId } = req.params;
+    const { startDate, endDate } = req.query;
+    const range = getDateRange('custom', startDate, endDate);
+
+    const staff = await Staff.findById(staffId);
+    if (!staff) {
+      return res.status(404).json({ message: 'Staff member not found' });
+    }
+
+    const entries = await Entry.find({
+      staff: staffId,
+      createdAt: { $gte: range.start, $lte: range.end }
+    }).populate('customer');
+
+    let totalVisits = entries.length;
+    let grossBilledSales = 0;
+    let totalProductCost = 0;
+    let totalServiceRevenue = 0;
+    let totalCommissionEarned = 0;
+
+    const logs = entries.map(entry => {
+      grossBilledSales += entry.finalAmount;
+      totalProductCost += entry.totalProductCost || 0;
+      totalServiceRevenue += entry.totalServiceRevenue || 0;
+
+      const commissionBase = entry.totalServiceRevenue !== undefined ? Math.max(0, entry.totalServiceRevenue - entry.discount) : entry.finalAmount;
+      const commEarned = Math.round((commissionBase * (staff.commission || 0)) / 100);
+      totalCommissionEarned += commEarned;
+
+      return {
+        _id: entry._id,
+        date: entry.createdAt,
+        customerName: entry.customer?.name || 'Walk-in',
+        customerPhone: entry.customer?.phone || 'N/A',
+        services: entry.services.map(s => ({
+          name: s.name,
+          price: s.price,
+          isSplit: s.isSplit,
+          productPrice: s.productPrice,
+          servicePrice: s.servicePrice
+        })),
+        discount: entry.discount,
+        finalAmount: entry.finalAmount,
+        productCost: entry.totalProductCost || 0,
+        serviceRevenue: entry.totalServiceRevenue || entry.finalAmount,
+        commissionBase,
+        commissionEarned: commEarned
+      };
+    });
+
+    res.json({
+      staff: {
+        name: staff.name,
+        role: staff.role,
+        commissionRate: staff.commission || 0
+      },
+      summary: {
+        totalVisits,
+        grossBilledSales,
+        totalProductCost,
+        totalServiceRevenue,
+        totalCommissionEarned
+      },
+      logs
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to compile staff report', error: error.message });
   }
 });
 

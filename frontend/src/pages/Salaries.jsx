@@ -129,6 +129,16 @@ export default function Salaries() {
     const perf = performanceMap[st.name] || { revenue: 0, count: 0, totalBilled: 0 };
     const edits = salaryEdits[st._id] || { salary: st.salary || 0, commission: st.commission || 0 };
     
+    const att = (report && report.attendanceSummary && report.attendanceSummary[st._id]) || { Present: 0, Absent: 0, Leave: 0 };
+    const presentCount = att.Present || 0;
+    const leaveCount = att.Leave || 0;
+    const absentCount = att.Absent || 0;
+    const totalWorkingDays = presentCount + leaveCount + absentCount;
+    
+    const suggestedFixedBase = totalWorkingDays > 0 
+      ? Math.round(((st.salary || 0) * presentCount) / totalWorkingDays)
+      : (st.salary || 0);
+
     const commissionVal = Math.round((perf.revenue * edits.commission) / 100);
     const totalPayout = edits.salary + commissionVal;
     
@@ -141,7 +151,11 @@ export default function Salaries() {
       totalBilled: perf.totalBilled !== undefined ? perf.totalBilled : perf.revenue,
       visits: perf.count,
       commissionEarned: commissionVal,
-      totalPayout
+      totalPayout,
+      presentCount,
+      leaveCount,
+      absentCount,
+      suggestedFixedBase
     };
   });
 
@@ -204,6 +218,7 @@ export default function Salaries() {
               <tr className="bg-slate-50 text-slate-400 font-bold border-b border-slate-100 uppercase text-[9px] tracking-wider">
                 <th className="py-4 px-6">Stylist / Role</th>
                 <th className="py-4 px-4">Sales Billed</th>
+                <th className="py-4 px-4">Attendance</th>
                 <th className="py-4 px-4">Base Fixed Salary</th>
                 <th className="py-4 px-4">Commission Rate</th>
                 <th className="py-4 px-4">Gross Billed Sales</th>
@@ -231,6 +246,24 @@ export default function Salaries() {
                       {st.visits} customer visits
                     </td>
 
+                    {/* Attendance summary column */}
+                    <td className="py-4.5 px-4">
+                      {st.presentCount + st.leaveCount + st.absentCount > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          <span className="inline-block bg-emerald-50 text-emerald-600 border border-emerald-100/50 px-2 py-0.5 rounded-lg text-[10px] font-bold">
+                            P: {st.presentCount}d
+                          </span>
+                          {st.leaveCount > 0 && (
+                            <span className="inline-block bg-amber-50 text-amber-600 border border-amber-100/50 px-2 py-0.5 rounded-lg text-[10px] font-bold">
+                              L: {st.leaveCount}d
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 font-medium text-[11px]">No logs</span>
+                      )}
+                    </td>
+
                     {/* Fixed salary input */}
                     <td className="py-4.5 px-4 w-40">
                       <div className="relative w-32">
@@ -245,6 +278,11 @@ export default function Salaries() {
                           min={0}
                         />
                       </div>
+                      {st.presentCount + st.leaveCount + st.absentCount > 0 && (
+                        <span className="block text-[9px] font-bold text-slate-400 mt-1">
+                          Pro-rata: ₹{st.suggestedFixedBase.toLocaleString('en-IN')}
+                        </span>
+                      )}
                     </td>
 
                     {/* Commission percentage input */}

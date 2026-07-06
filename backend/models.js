@@ -85,10 +85,22 @@ const mongooseSettingsSchema = new mongoose.Schema({
   theme: { type: String, default: 'light' }
 });
 
+const mongooseAttendanceSchema = new mongoose.Schema({
+  staff: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
+  date: { type: String, required: true }, // YYYY-MM-DD
+  status: { type: String, enum: ['Present', 'Absent', 'Leave'], default: 'Present' },
+  inTime: { type: String, default: '09:30 AM' },
+  outTime: { type: String, default: '07:30 PM' },
+  notes: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now }
+});
+mongooseAttendanceSchema.index({ staff: 1, date: 1 }, { unique: true });
+
 const MongooseStaff = mongoose.model('Staff', mongooseStaffSchema);
 const MongooseService = mongoose.model('Service', mongooseServiceSchema);
 const MongooseCustomer = mongoose.model('Customer', mongooseCustomerSchema);
 const MongooseEntry = mongoose.model('Entry', mongooseEntrySchema);
+const MongooseAttendance = mongoose.model('Attendance', mongooseAttendanceSchema);
 const MongooseSettings = mongoose.model('Settings', mongooseSettingsSchema);
 
 // ----------------------------------------------------
@@ -555,6 +567,7 @@ const MockService = buildMockModelClass('Service');
 const MockCustomer = buildMockModelClass('Customer');
 const MockEntry = buildMockModelClass('Entry');
 const MockSettings = buildMockModelClass('Settings');
+const MockAttendance = buildMockModelClass('Attendance');
 
 // ----------------------------------------------------
 // 3. MAIN ES6 CLASS DISPATCHERS (TRANSPARENT REPLACEMENT)
@@ -652,11 +665,28 @@ class Settings {
   static updateMany(q, u) { return useMock ? MockSettings.updateMany(q, u) : MongooseSettings.updateMany(q, u); }
 }
 
+class Attendance {
+  constructor(data) {
+    this._data = data;
+    return useMock ? new MockAttendance(data) : new MongooseAttendance(data);
+  }
+  static find(q) { return useMock ? MockAttendance.find(q) : MongooseAttendance.find(q); }
+  static findOne(q) { return useMock ? MockAttendance.findOne(q) : MongooseAttendance.findOne(q); }
+  static findById(id) { return useMock ? MockAttendance.findById(id) : MongooseAttendance.findById(id); }
+  static findByIdAndUpdate(id, update, opt) { return useMock ? MockAttendance.findByIdAndUpdate(id, update, opt) : MongooseAttendance.findByIdAndUpdate(id, update, opt); }
+  static findByIdAndDelete(id) { return useMock ? MockAttendance.findByIdAndDelete(id) : MongooseAttendance.findByIdAndDelete(id); }
+  static countDocuments(q) { return useMock ? MockAttendance.countDocuments(q) : MongooseAttendance.countDocuments(q); }
+  static insertMany(arr) { return useMock ? MockAttendance.insertMany(arr) : MongooseAttendance.insertMany(arr); }
+  static deleteMany(q) { return useMock ? MockAttendance.deleteMany(q) : MongooseAttendance.deleteMany(q); }
+  static updateMany(q, u) { return useMock ? MockAttendance.updateMany(q, u) : MongooseAttendance.updateMany(q, u); }
+}
+
 module.exports = {
   Staff,
   Service,
   Customer,
   Entry,
   Settings,
+  Attendance,
   setUseMock
 };
