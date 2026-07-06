@@ -287,26 +287,28 @@ export default function Reports() {
               y: padT + plotH * (1 - pct)
             }));
 
-            const pts = chartData.map((d, i) => ({
-              x: padL + (chartData.length === 1 ? plotW / 2 : (i / (chartData.length - 1)) * plotW),
-              y: padT + plotH * (1 - (d.revenue / maxRevenue)),
-              revenue: d.revenue, date: d.date
-            }));
-
-            const lPath = rptSmoothPath(pts);
-            const aPath = pts.length > 0
-              ? `${lPath} L ${pts[pts.length-1].x},${padT+plotH} L ${pts[0].x},${padT+plotH} Z`
-              : '';
+            // Bars data
+            const bars = chartData.map((d, i) => {
+              const colW = plotW / chartData.length;
+              const barW = Math.min(32, colW * 0.6);
+              const x = padL + i * colW + (colW - barW) / 2;
+              const barH = d.revenue > 0 ? Math.max((d.revenue / maxRevenue) * plotH, 6) : 6;
+              const y = padT + plotH - barH;
+              return { x, y, barW, barH, revenue: d.revenue, date: d.date };
+            });
 
             return (
               <div className="w-full overflow-x-auto mt-2 pb-1">
                 <div style={{ minWidth: `${rptChartW}px` }}>
                   <svg viewBox={`0 0 ${rptChartW} ${rptChartH}`} className="w-full h-72 overflow-visible">
                     <defs>
-                      <linearGradient id="rpt-area-grad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#EC4899" stopOpacity="0.22" />
-                        <stop offset="70%" stopColor="#F9A8D4" stopOpacity="0.07" />
-                        <stop offset="100%" stopColor="#FDF2F8" stopOpacity="0" />
+                      <linearGradient id="rpt-bar-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#EC4899" />
+                        <stop offset="100%" stopColor="#BE185D" />
+                      </linearGradient>
+                      <linearGradient id="rpt-bar-gradient-empty" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#FCE7F3" />
+                        <stop offset="100%" stopColor="#FDF2F8" />
                       </linearGradient>
                     </defs>
 
@@ -316,32 +318,36 @@ export default function Reports() {
                           stroke={i === 0 ? '#FBCFE8' : '#FCE7F3'}
                           strokeWidth={i === 0 ? 1.5 : 1}
                           strokeDasharray={i === 0 ? '0' : '5 4'} />
-                        <text x={padL - 6} y={t.y + 4} textAnchor="end"
-                          fill="#C084FC" fontSize="9" fontWeight="700">
+                        <text x={padL - 8} y={t.y + 4} textAnchor="end"
+                          fill="#C084FC" fontSize="9.5" fontWeight="700">
                           {t.val >= 1000 ? `₹${(t.val/1000).toFixed(1)}k` : `₹${t.val}`}
                         </text>
                       </g>
                     ))}
 
-                    {aPath && <path d={aPath} fill="url(#rpt-area-grad)" />}
-
-                    {lPath && (
-                      <path d={lPath} fill="none" stroke="#DB2777" strokeWidth="2.5"
-                        strokeLinecap="round" strokeLinejoin="round"
-                        style={{ filter: 'drop-shadow(0 2px 6px rgba(219,39,119,0.3))' }} />
-                    )}
-
-                    {pts.map((p, idx) => (
+                    {/* Bars */}
+                    {bars.map((b, idx) => (
                       <g key={idx}>
-                        {p.revenue > 0 && <circle cx={p.x} cy={p.y} r="7" fill="#FBCFE8" opacity="0.5" />}
-                        <circle cx={p.x} cy={p.y} r="4" fill="#fff"
-                          stroke={p.revenue > 0 ? '#DB2777' : '#FBCFE8'} strokeWidth="2.5"
-                          style={{ filter: p.revenue > 0 ? 'drop-shadow(0 2px 4px rgba(219,39,119,0.3))' : 'none' }} />
-                        {p.revenue > 0 && (
+                        {/* Bar background track */}
+                        <rect
+                          x={b.x} y={padT}
+                          width={b.barW} height={plotH}
+                          rx={6} fill="#FFF0F6" opacity="0.4"
+                        />
+                        {/* Active Bar */}
+                        <rect
+                          x={b.x} y={b.y}
+                          width={b.barW} height={b.barH}
+                          rx={6}
+                          fill={b.revenue > 0 ? 'url(#rpt-bar-gradient)' : 'url(#rpt-bar-gradient-empty)'}
+                          style={{ filter: b.revenue > 0 ? 'drop-shadow(0 4px 6px rgba(219,39,119,0.25))' : 'none' }}
+                        />
+                        {/* Value badge above bar */}
+                        {b.revenue > 0 && (
                           <>
-                            <rect x={p.x - 22} y={p.y - 26} width="44" height="17" rx="8" fill="#BE185D" />
-                            <text x={p.x} y={p.y - 14} textAnchor="middle" fill="#fff" fontSize="8.5" fontWeight="800">
-                              {p.revenue >= 1000 ? `₹${(p.revenue/1000).toFixed(1)}k` : `₹${p.revenue}`}
+                            <rect x={b.x + b.barW / 2 - 22} y={b.y - 24} width="44" height="17" rx="8" fill="#BE185D" />
+                            <text x={b.x + b.barW / 2} y={b.y - 12} textAnchor="middle" fill="#fff" fontSize="8.5" fontWeight="800">
+                              {b.revenue >= 1000 ? `₹${(b.revenue/1000).toFixed(1)}k` : `₹${b.revenue}`}
                             </text>
                           </>
                         )}
@@ -369,6 +375,7 @@ export default function Reports() {
               Not enough daily data nodes to build trend graph.
             </div>
           )}
+
 
         </div>
 
