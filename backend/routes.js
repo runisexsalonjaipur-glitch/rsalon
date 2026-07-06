@@ -246,6 +246,12 @@ router.post('/entries', requireAdminOrSuperAdmin, async (req, res) => {
     if (!services || services.length === 0) return res.status(400).json({ message: 'At least one service must be selected' });
     if (!paymentMode) return res.status(400).json({ message: 'Payment mode is required' });
 
+    // Check if name is already taken by another customer with a different phone number
+    let existingByName = await Customer.findOne({ name: customerName });
+    if (existingByName && existingByName.phone !== customerPhone) {
+      return res.status(400).json({ message: `Customer name "${customerName}" already exists with a different number (${existingByName.phone}). Please use a unique name.` });
+    }
+
     let customer = await Customer.findOne({ phone: customerPhone });
     if (!customer) {
       customer = new Customer({ name: customerName, phone: customerPhone });

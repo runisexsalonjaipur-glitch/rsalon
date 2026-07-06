@@ -510,13 +510,15 @@ export default function CustomerHistory() {
       </div>
 
       {/* History List */}
-      {loading ? (
-        <div className="h-48 flex flex-col items-center justify-center gap-3">
-          <div className="w-10 h-10 border-3 border-accent border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold text-slate-400">Loading visit history...</p>
-        </div>
-      ) : entries.length > 0 ? (
+      {entries.length > 0 ? (
         <div className="space-y-4">
+          {/* Background loading revalidation indicator */}
+          {loading && (
+            <div className="w-full bg-rose-50/50 border border-rose-100 p-2.5 rounded-2xl text-center text-xs font-bold text-rose-700 flex items-center justify-center gap-1.5 animate-pulse shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              Refreshing visit registers in background...
+            </div>
+          )}
           {/* List grid - Converts to stacked cards on mobile */}
           <div className="hidden md:block bg-white rounded-[28px] shadow-soft border border-slate-100/60 overflow-hidden">
             <table className="w-full text-left border-collapse">
@@ -602,7 +604,7 @@ export default function CustomerHistory() {
                           <p className="text-[11px] text-red-600 font-extrabold">Due: {formatAmt(entry.dueAmount)}</p>
                           <button
                             onClick={() => openClearDueDialog(entry)}
-                            className="text-[10px] font-bold text-primary hover:text-primary-light hover:underline mt-1 block ml-auto"
+                            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold rounded-xl transition-all shadow-md hover:shadow-rose-600/10 active:scale-95 block ml-auto mt-1.5"
                           >
                             Clear Due
                           </button>
@@ -705,7 +707,7 @@ export default function CustomerHistory() {
                           <p className="text-[10.5px] text-red-600 font-extrabold">Due: {formatAmt(entry.dueAmount)}</p>
                           <button
                             onClick={() => openClearDueDialog(entry)}
-                            className="text-[10px] font-bold text-primary hover:text-primary-light hover:underline mt-1 block ml-auto"
+                            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold rounded-xl transition-all shadow-md hover:shadow-rose-600/10 active:scale-95 block ml-auto mt-1.5"
                           >
                             Clear Due
                           </button>
@@ -759,6 +761,11 @@ export default function CustomerHistory() {
               </div>
             </div>
           )}
+        </div>
+      ) : loading ? (
+        <div className="h-48 flex flex-col items-center justify-center gap-3">
+          <div className="w-10 h-10 border-3 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-slate-400">Loading visit history...</p>
         </div>
       ) : (
         <div className="bg-white p-12 rounded-[28px] border border-slate-100 shadow-soft text-center text-slate-400 flex flex-col items-center justify-center gap-3">

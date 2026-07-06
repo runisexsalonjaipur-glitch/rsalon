@@ -359,7 +359,7 @@ export default function Dashboard() {
           </div>
           <div>
             <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">{getCardLabel('revenue')}</span>
-            {loading ? <Sk w="w-16" h="h-6" /> : (
+            {loading && !stats ? <Sk w="w-16" h="h-6" /> : (
               <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(stats?.todayRevenue)}</span>
             )}
           </div>
@@ -372,7 +372,7 @@ export default function Dashboard() {
           </div>
           <div>
             <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">{getCardLabel('visits')}</span>
-            {loading ? <Sk w="w-10" h="h-6" /> : (
+            {loading && !stats ? <Sk w="w-10" h="h-6" /> : (
               <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{stats?.todayCustomers ?? 0}</span>
             )}
           </div>
@@ -386,7 +386,7 @@ export default function Dashboard() {
             </div>
             <div>
               <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">Month Revenue</span>
-              {loading ? <Sk w="w-16" h="h-6" /> : (
+              {loading && !stats ? <Sk w="w-16" h="h-6" /> : (
                 <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(stats?.monthlyRevenue)}</span>
               )}
             </div>
@@ -398,7 +398,7 @@ export default function Dashboard() {
             </div>
             <div>
               <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">{getCardLabel('services')}</span>
-              {loading ? <Sk w="w-14" h="h-6" /> : (
+              {loading && !stats ? <Sk w="w-14" h="h-6" /> : (
                 <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{stats?.todayServicesCount ?? 0} Sold</span>
               )}
             </div>
@@ -412,7 +412,7 @@ export default function Dashboard() {
           </div>
           <div>
             <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">{getCardLabel('avgTicket')}</span>
-            {loading ? <Sk w="w-14" h="h-6" /> : (
+            {loading && !stats ? <Sk w="w-14" h="h-6" /> : (
               <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(stats?.averageBill)}</span>
             )}
           </div>
@@ -431,13 +431,7 @@ export default function Dashboard() {
           </div>
 
           {/* Premium Bar Chart */}
-          {loading ? (
-            <div className="w-full h-80 flex items-end gap-2 px-4 pb-2 mt-4">
-              {[60, 80, 45, 90, 55, 70, 40].map((h, i) => (
-                <div key={i} className="flex-1 bg-slate-200 animate-pulse rounded-t-xl" style={{ height: `${h}%` }} />
-              ))}
-            </div>
-          ) : chartData.length > 0 ? (() => {
+          {chartData.length > 0 ? (() => {
             // Layout constants
             const padL = 54, padR = 16, padT = 36, padB = 32;
             const plotW = chartWidth - padL - padR;
@@ -558,7 +552,13 @@ export default function Dashboard() {
                 </div>
               </div>
             );
-          })() : (
+          })() : loading ? (
+            <div className="w-full h-80 flex items-end gap-2 px-4 pb-2 mt-4">
+              {[60, 80, 45, 90, 55, 70, 40].map((h, i) => (
+                <div key={i} className="flex-1 bg-slate-200 animate-pulse rounded-t-xl" style={{ height: `${h}%` }} />
+              ))}
+            </div>
+          ) : (
             <div className="h-72 flex items-center justify-center text-xs text-slate-450">
               No data available for the selected period
             </div>
@@ -580,10 +580,10 @@ export default function Dashboard() {
             <div>
               <div className="flex justify-between items-center text-xs font-semibold text-slate-600 mb-1.5">
                 <span className="flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5 text-emerald-500" /> Cash</span>
-                {loading ? <Sk w="w-20" h="h-4" /> : <span>{formatAmt(cashVal)} ({cashPct}%)</span>}
+                {loading && !stats ? <Sk w="w-20" h="h-4" /> : <span>{formatAmt(cashVal)} ({cashPct}%)</span>}
               </div>
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-700 ${loading ? 'bg-slate-200 animate-pulse w-1/2' : 'bg-emerald-500'}`} style={!loading ? { width: `${cashPct}%` } : {}} />
+                <div className={`h-full rounded-full transition-all duration-700 ${loading && !stats ? 'bg-slate-200 animate-pulse w-1/2' : 'bg-emerald-500'}`} style={!(loading && !stats) ? { width: `${cashPct}%` } : {}} />
               </div>
             </div>
 
@@ -591,10 +591,10 @@ export default function Dashboard() {
             <div>
               <div className="flex justify-between items-center text-xs font-semibold text-slate-600 mb-1.5">
                 <span className="flex items-center gap-1.5"><Smartphone className="w-3.5 h-3.5 text-blue-500" /> UPI</span>
-                {loading ? <Sk w="w-20" h="h-4" /> : <span>{formatAmt(upiVal)} ({upiPct}%)</span>}
+                {loading && !stats ? <Sk w="w-20" h="h-4" /> : <span>{formatAmt(upiVal)} ({upiPct}%)</span>}
               </div>
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-700 ${loading ? 'bg-slate-200 animate-pulse w-1/3' : 'bg-blue-500'}`} style={!loading ? { width: `${upiPct}%` } : {}} />
+                <div className={`h-full rounded-full transition-all duration-700 ${loading && !stats ? 'bg-slate-200 animate-pulse w-1/3' : 'bg-blue-500'}`} style={!(loading && !stats) ? { width: `${upiPct}%` } : {}} />
               </div>
             </div>
 
@@ -602,17 +602,17 @@ export default function Dashboard() {
             <div>
               <div className="flex justify-between items-center text-xs font-semibold text-slate-600 mb-1.5">
                 <span className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-amber-500" /> Card</span>
-                {loading ? <Sk w="w-20" h="h-4" /> : <span>{formatAmt(cardVal)} ({cardPct}%)</span>}
+                {loading && !stats ? <Sk w="w-20" h="h-4" /> : <span>{formatAmt(cardVal)} ({cardPct}%)</span>}
               </div>
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-700 ${loading ? 'bg-slate-200 animate-pulse w-1/4' : 'bg-amber-500'}`} style={!loading ? { width: `${cardPct}%` } : {}} />
+                <div className={`h-full rounded-full transition-all duration-700 ${loading && !stats ? 'bg-slate-200 animate-pulse w-1/4' : 'bg-amber-500'}`} style={!(loading && !stats) ? { width: `${cardPct}%` } : {}} />
               </div>
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-bold text-slate-800">
             <span>Total Collected</span>
-            {loading ? <Sk w="w-16" h="h-4" /> : <span>{formatAmt(totalSplit)}</span>}
+            {loading && !stats ? <Sk w="w-16" h="h-4" /> : <span>{formatAmt(totalSplit)}</span>}
           </div>
         </div>
       </div>
@@ -631,20 +631,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          {loading ? (
-            // Skeleton rows
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl border border-slate-100">
-                  <div className="space-y-2">
-                    <Sk w="w-24" h="h-3" />
-                    <Sk w="w-16" h="h-2.5" />
-                  </div>
-                  <Sk w="w-14" h="h-5" rounded="rounded-full" />
-                </div>
-              ))}
-            </div>
-          ) : stats?.recentEntries && stats.recentEntries.length > 0 ? (
+          {stats?.recentEntries && stats.recentEntries.length > 0 ? (
             <>
               {/* Desktop View Table */}
               <div className="hidden md:block overflow-x-auto">
@@ -721,6 +708,19 @@ export default function Dashboard() {
                 ))}
               </div>
             </>
+          ) : loading ? (
+            // Skeleton rows
+            <div className="space-y-3 animate-pulse">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl border border-slate-100">
+                  <div className="space-y-2">
+                    <div className="h-3 bg-slate-200 rounded w-24" />
+                    <div className="h-2.5 bg-slate-150 rounded w-16" />
+                  </div>
+                  <div className="h-5 bg-slate-200 rounded-full w-14" />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="h-48 flex flex-col items-center justify-center text-xs text-slate-400 gap-2">
               <Clock className="w-8 h-8 text-slate-300" />
@@ -732,7 +732,7 @@ export default function Dashboard() {
         {/* Top Staff / Services List */}
         <div className="bg-white p-6 rounded-[28px] shadow-soft border border-slate-100/60">
           {role === 'super_admin' ? (
-            loading ? (
+            loading && !stats ? (
               // Skeleton for top staff
               <div className="space-y-4">
                 <div className="space-y-1">
@@ -805,17 +805,7 @@ export default function Dashboard() {
                 <p className="text-xs text-slate-400">View active operational staff</p>
               </div>
               <div className="space-y-3 my-4">
-                {loading ? (
-                  [1, 2, 3].map(i => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl border border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-slate-200 animate-pulse" />
-                        <Sk w="w-20" h="h-3" />
-                      </div>
-                      <Sk w="w-14" h="h-4" rounded="rounded" />
-                    </div>
-                  ))
-                ) : staff.length > 0 ? (
+                {staff.length > 0 ? (
                   staff.map((st) => (
                     <div key={st._id} className="flex items-center justify-between p-3 bg-slate-50/50 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-colors">
                       <div className="flex items-center gap-3">
@@ -823,6 +813,16 @@ export default function Dashboard() {
                         <span className="text-xs font-semibold text-slate-700">{st.name}</span>
                       </div>
                       <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-500">{st.role}</span>
+                    </div>
+                  ))
+                ) : loading ? (
+                  [1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl border border-slate-100 animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-slate-200" />
+                        <div className="h-3 bg-slate-200 rounded w-20" />
+                      </div>
+                      <div className="h-4 bg-slate-200 rounded w-14" />
                     </div>
                   ))
                 ) : (

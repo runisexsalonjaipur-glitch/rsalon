@@ -44,6 +44,9 @@ export default function CustomerEntry() {
   const [serviceSearch, setServiceSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const [customServiceName, setCustomServiceName] = useState('');
+  const [customServicePrice, setCustomServicePrice] = useState('');
+  const [showCustomForm, setShowCustomForm] = useState(false);
 
   // Autocomplete customer search
   const [customerSearchResults, setCustomerSearchResults] = useState([]);
@@ -147,6 +150,39 @@ export default function CustomerEntry() {
       prev.map(item => item.serviceId === serviceId ? { ...item, qty: item.qty + delta } : item)
           .filter(item => item.qty > 0)
     );
+  };
+
+  const handleAddCustomService = () => {
+    if (!customServiceName.trim()) {
+      toast.error('Please enter a custom service name');
+      return;
+    }
+    if (Number(customServicePrice) <= 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+
+    const hexObjectId = (() => {
+      const timestamp = Math.floor(new Date().getTime() / 1000).toString(16).padStart(8, '0');
+      const random = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      return timestamp + random;
+    })();
+
+    setSelectedServices([
+      ...selectedServices,
+      {
+        serviceId: hexObjectId,
+        name: customServiceName.trim() + ' (Custom)',
+        price: Number(customServicePrice),
+        qty: 1,
+        isCustom: true
+      }
+    ]);
+
+    setCustomServiceName('');
+    setCustomServicePrice('');
+    setShowCustomForm(false);
+    toast.success('Custom service added!');
   };
 
   // Subtotal: sum of (price × qty)
@@ -287,16 +323,16 @@ export default function CustomerEntry() {
 
                 {/* Name Autocomplete Dropdown */}
                 {showNameDropdown && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-150 rounded-2xl shadow-xl z-20 max-h-48 overflow-y-auto divide-y divide-slate-50">
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-200/80 z-30 max-h-48 overflow-y-auto divide-y divide-slate-100 animate-fadeIn">
                     {nameSearchResults.map(c => (
                       <button
                         key={c._id}
                         type="button"
                         onClick={() => selectExistingCustomer(c)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-xs font-semibold text-slate-700 flex justify-between items-center"
+                        className="w-full text-left px-5 py-3 hover:bg-slate-50 transition-all text-xs font-semibold text-slate-700 flex justify-between items-center"
                       >
-                        <span>{c.name}</span>
-                        <span className="text-slate-400 font-medium">{c.phone}</span>
+                        <span className="font-bold text-slate-800 text-sm">{c.name}</span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">+91 {c.phone}</span>
                       </button>
                     ))}
                   </div>
@@ -306,32 +342,36 @@ export default function CustomerEntry() {
               {/* Phone Input with dropdown search */}
               <div className="relative">
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mobile Number (Search)</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <div className="relative flex items-center">
+                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none gap-1.5">
                     <Phone className="h-4 w-4 text-slate-400" />
+                    <span className="text-xs font-bold text-slate-500 border-r border-slate-200 pr-2 ml-0.5">+91</span>
                   </span>
                   <input
                     type="tel"
                     placeholder="Enter 10 digit mobile"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="form-input !pl-11"
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, '');
+                      setCustomerPhone(clean);
+                    }}
+                    className="form-input !pl-20"
                     maxLength={10}
                   />
                 </div>
 
                 {/* Autocomplete Dropdown */}
                 {showCustomerDropdown && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-150 rounded-2xl shadow-xl z-20 max-h-48 overflow-y-auto divide-y divide-slate-50">
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200/90 rounded-2xl shadow-2xl shadow-slate-200/80 z-30 max-h-48 overflow-y-auto divide-y divide-slate-100 animate-fadeIn">
                     {customerSearchResults.map(c => (
                       <button
                         key={c._id}
                         type="button"
                         onClick={() => selectExistingCustomer(c)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-xs font-semibold text-slate-700 flex justify-between items-center"
+                        className="w-full text-left px-5 py-3 hover:bg-slate-50 transition-all text-xs font-semibold text-slate-700 flex justify-between items-center"
                       >
-                        <span>{c.name}</span>
-                        <span className="text-slate-400 font-medium">{c.phone}</span>
+                        <span className="font-bold text-slate-800 text-sm">{c.name}</span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">+91 {c.phone}</span>
                       </button>
                     ))}
                   </div>
@@ -455,6 +495,63 @@ export default function CustomerEntry() {
                     })}
                   </div>
                 </>
+              )}
+            </div>
+
+            {/* Custom Service Toggle */}
+            <div className="pt-2 border-t border-slate-100">
+              {!showCustomForm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCustomForm(true)}
+                  className="text-xs font-bold text-primary hover:text-primary-light flex items-center gap-1"
+                >
+                  + Add Custom Service (Note & Amount)
+                </button>
+              ) : (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-3 animate-fadeIn">
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Custom Service Details</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Service name / Note"
+                        value={customServiceName}
+                        onChange={(e) => setCustomServiceName(e.target.value)}
+                        className="form-input text-xs bg-white"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        placeholder="Amount (₹)"
+                        value={customServicePrice}
+                        onChange={(e) => setCustomServicePrice(e.target.value)}
+                        className="form-input text-xs bg-white text-right"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomForm(false);
+                        setCustomServiceName('');
+                        setCustomServicePrice('');
+                      }}
+                      className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-650 rounded-lg text-xs font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddCustomService}
+                      className="px-3.5 py-1.5 bg-primary hover:bg-primary-light text-white rounded-lg text-xs font-semibold"
+                    >
+                      Add Service
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 

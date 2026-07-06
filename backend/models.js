@@ -49,7 +49,7 @@ const mongooseEntrySchema = new mongoose.Schema({
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
   staff: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
   services: [{
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
+    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
     name: { type: String, required: true },
     price: { type: Number, required: true }
   }],
