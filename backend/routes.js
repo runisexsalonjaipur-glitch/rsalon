@@ -44,17 +44,21 @@ const getDateRange = (filterType, startCustom, endCustom) => {
 router.post('/auth/login', (req, res) => {
   const { username, password } = req.body;
 
+  // Trim to handle accidental spaces from mobile keyboards
+  const inputUser = (username || '').trim();
+  const inputPass = (password || '').trim();
+
   const superAdminUser = process.env.SUPER_ADMIN_USERNAME || 'superadmin';
   const superAdminPass = process.env.SUPER_ADMIN_PASSWORD || 'superpassword';
   const adminUser = process.env.ADMIN_USERNAME || 'admin';
   const adminPass = process.env.ADMIN_PASSWORD || 'adminpassword';
 
-  if (username === superAdminUser && password === superAdminPass) {
-    const token = jwt.sign({ username, role: 'super_admin' }, JWT_SECRET, { expiresIn: '7d' });
-    return res.json({ token, username, role: 'super_admin' });
-  } else if (username === adminUser && password === adminPass) {
-    const token = jwt.sign({ username, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
-    return res.json({ token, username, role: 'admin' });
+  if (inputUser === superAdminUser && inputPass === superAdminPass) {
+    const token = jwt.sign({ username: inputUser, role: 'super_admin' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ token, username: inputUser, role: 'super_admin' });
+  } else if (inputUser === adminUser && inputPass === adminPass) {
+    const token = jwt.sign({ username: inputUser, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ token, username: inputUser, role: 'admin' });
   }
 
   return res.status(401).json({ message: 'Invalid username or password' });

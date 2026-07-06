@@ -15,8 +15,8 @@ export default function Login() {
   // Wake up Railway backend immediately when login page loads
   useEffect(() => {
     pingServer();
-    // Mark server as warming — after 8s assume it's ready (cold start ~30s max)
-    const timer = setTimeout(() => setServerReady(true), 8000);
+    // Railway cold start can take up to 35s on free tier
+    const timer = setTimeout(() => setServerReady(true), 35000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -25,9 +25,14 @@ export default function Login() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
+      // Trim to remove accidental spaces, lowercase to fix mobile autocapitalize
+      const credentials = {
+        username: data.username.trim(),
+        password: data.password.trim()
+      };
       const res = await apiCall('/auth/login', {
         method: 'POST',
-        body: data
+        body: credentials
       });
       
       localStorage.setItem('token', res.token);
@@ -84,6 +89,10 @@ export default function Login() {
               <input
                 type="text"
                 placeholder="Enter username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="username"
+                spellCheck={false}
                 {...register('username', { required: 'Username is required' })}
                 className="form-input !pl-11 text-xs"
               />
@@ -112,6 +121,10 @@ export default function Login() {
               <input
                 type="password"
                 placeholder="Enter password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="current-password"
+                spellCheck={false}
                 {...register('password', { required: 'Password is required' })}
                 className="form-input !pl-11 text-xs"
               />
