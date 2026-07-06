@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const router = express.Router();
-const { Staff, Service, Customer, Entry, Settings, Attendance } = require('./models');
+const { Staff, Service, Customer, Entry, Settings, Attendance, SalaryPayout } = require('./models');
 const { JWT_SECRET, requireSuperAdmin, requireAdminOrSuperAdmin } = require('./auth');
 
 // Helper to get date ranges
@@ -907,6 +907,54 @@ router.get('/reports/staff/:staffId', requireAdminOrSuperAdmin, async (req, res)
 
   } catch (error) {
     res.status(500).json({ message: 'Failed to compile staff report', error: error.message });
+  }
+});
+
+// --- SALARY PAYOUT RECORDS ---
+router.post('/salaries/payout', requireSuperAdmin, async (req, res) => {
+  try {
+    const { staffId, month, startDate, endDate, baseSalary, commission, totalPaid, paymentMethod, notes } = req.body;
+    if (!staffId || !month || totalPaid === undefined) {
+      return res.status(400).json({ message: 'Staff ID, month, and total paid amount are required' });
+    }
+
+    const payout = new SalaryPayout({
+      staff: staffId,
+      month,
+      startDate,
+      endDate,
+      baseSalary: Number(baseSalary || 0),
+      commission: Number(commission || 0),
+      totalPaid: Number(totalPaid),
+      paymentMethod: paymentMethod || 'Cash',
+      notes: notes || ''
+    });
+
+    await payout.save();
+    res.json({ message: 'Salary payout logged successfully', payout });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to record payout', error: error.message });
+  }
+});
+
+router.get('/salaries/payout', requireSuperAdmin, async (req, res) => {
+  try {
+    const payouts = await SalaryPayout.find({}).populate('staff');
+    // Sort by paidAt descending
+    payouts.sort((a, b) => new Date(b.paidAt) - new Date(a.paidAt));
+    res.json(payouts);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch payout records', error: error.message });
+  }
+});
+
+router.delete('/salaries/payout/:id', requireSuperAdmin, async (req, res) => {
+  try {
+    const payout = await SalaryPayout.findByIdAndDelete(req.params.id);
+    if (!payout) return res.status(404).json({ message: 'Payout record not found' });
+    res.json({ message: 'Payout record reversed/deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to delete payout record', error: error.message });
   }
 });
 

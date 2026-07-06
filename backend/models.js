@@ -96,12 +96,26 @@ const mongooseAttendanceSchema = new mongoose.Schema({
 });
 mongooseAttendanceSchema.index({ staff: 1, date: 1 }, { unique: true });
 
+const mongooseSalaryPayoutSchema = new mongoose.Schema({
+  staff: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
+  month: { type: String, required: true }, // YYYY-MM
+  startDate: { type: String }, // YYYY-MM-DD
+  endDate: { type: String }, // YYYY-MM-DD
+  baseSalary: { type: Number, required: true },
+  commission: { type: Number, required: true },
+  totalPaid: { type: Number, required: true },
+  paymentMethod: { type: String, enum: ['Cash', 'UPI'], default: 'Cash' },
+  notes: { type: String, default: '' },
+  paidAt: { type: Date, default: Date.now }
+});
+
 const MongooseStaff = mongoose.model('Staff', mongooseStaffSchema);
 const MongooseService = mongoose.model('Service', mongooseServiceSchema);
 const MongooseCustomer = mongoose.model('Customer', mongooseCustomerSchema);
 const MongooseEntry = mongoose.model('Entry', mongooseEntrySchema);
 const MongooseAttendance = mongoose.model('Attendance', mongooseAttendanceSchema);
 const MongooseSettings = mongoose.model('Settings', mongooseSettingsSchema);
+const MongooseSalaryPayout = mongoose.model('SalaryPayout', mongooseSalaryPayoutSchema);
 
 // ----------------------------------------------------
 // 2. FILE-BASED DATABASE (FALLBACK MOCK SCHEMAS)
@@ -568,6 +582,7 @@ const MockCustomer = buildMockModelClass('Customer');
 const MockEntry = buildMockModelClass('Entry');
 const MockSettings = buildMockModelClass('Settings');
 const MockAttendance = buildMockModelClass('Attendance');
+const MockSalaryPayout = buildMockModelClass('SalaryPayout');
 
 // ----------------------------------------------------
 // 3. MAIN ES6 CLASS DISPATCHERS (TRANSPARENT REPLACEMENT)
@@ -681,6 +696,36 @@ class Attendance {
   static updateMany(q, u) { return useMock ? MockAttendance.updateMany(q, u) : MongooseAttendance.updateMany(q, u); }
 }
 
+class SalaryPayout {
+  constructor(data) {
+    return useMock ? new MockSalaryPayout(data) : new MongooseSalaryPayout(data);
+  }
+  static find(q) { return useMock ? MockSalaryPayout.find(q) : MongooseSalaryPayout.find(q); }
+  static findOne(q) { return useMock ? MockSalaryPayout.findOne(q) : MongooseSalaryPayout.findOne(q); }
+  static findById(id) { return useMock ? MockSalaryPayout.findById(id) : MongooseSalaryPayout.findById(id); }
+  static findByIdAndUpdate(id, update, opt) { return useMock ? MockSalaryPayout.findByIdAndUpdate(id, update, opt) : MongooseSalaryPayout.findByIdAndUpdate(id, update, opt); }
+  static findByIdAndDelete(id) { return useMock ? MockSalaryPayout.findByIdAndDelete(id) : MongooseSalaryPayout.findByIdAndDelete(id); }
+  static countDocuments(q) { return useMock ? MockSalaryPayout.countDocuments(q) : MongooseSalaryPayout.countDocuments(q); }
+  static insertMany(arr) { return useMock ? MockSalaryPayout.insertMany(arr) : MongooseSalaryPayout.insertMany(arr); }
+  static deleteMany(q) { return useMock ? MockSalaryPayout.deleteMany(q) : MongooseSalaryPayout.deleteMany(q); }
+  static updateMany(q, u) { return useMock ? MockSalaryPayout.updateMany(q, u) : MongooseSalaryPayout.updateMany(q, u); }
+  static populate(d, o) {
+    if (useMock) {
+      const staffList = readJson('Staff');
+      const list = Array.isArray(d) ? d : [d];
+      list.forEach(item => {
+        if (item && item.staff) {
+          const sId = item.staff.toString();
+          const match = staffList.find(s => s._id === sId);
+          item.staff = match || { _id: sId, name: 'Unknown Stylist', role: 'Staff' };
+        }
+      });
+      return d;
+    }
+    return MongooseSalaryPayout.populate(d, o);
+  }
+}
+
 module.exports = {
   Staff,
   Service,
@@ -688,5 +733,6 @@ module.exports = {
   Entry,
   Settings,
   Attendance,
+  SalaryPayout,
   setUseMock
 };
