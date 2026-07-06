@@ -38,14 +38,8 @@ export default function Salaries() {
   const [showPayModal, setShowPayModal] = useState(false);
   const [payTargetStaff, setPayTargetStaff] = useState(null);
 
-  // Default month helper
   const getInitialPayrollMonth = () => {
-    const now = new Date();
-    if (now.getDate() <= 10) {
-      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      return prev.toISOString().slice(0, 7);
-    }
-    return now.toISOString().slice(0, 7);
+    return new Date().toISOString().slice(0, 7);
   };
 
   const [payrollMonth, setPayrollMonth] = useState(getInitialPayrollMonth);
