@@ -94,18 +94,28 @@ export default function CustomerEntry() {
     toast.success(`Selected customer: ${cust.name}`);
   };
 
-  // Service toggle
+  // Service quantity management
   const toggleService = (svc) => {
-    const isSelected = selectedServices.some(item => item.serviceId === svc._id);
-    if (isSelected) {
-      setSelectedServices(selectedServices.filter(item => item.serviceId !== svc._id));
+    const existing = selectedServices.find(item => item.serviceId === svc._id);
+    if (existing) {
+      // Already added — increment qty
+      setSelectedServices(selectedServices.map(item =>
+        item.serviceId === svc._id ? { ...item, qty: item.qty + 1 } : item
+      ));
     } else {
-      setSelectedServices([...selectedServices, { serviceId: svc._id, name: svc.name, price: svc.price }]);
+      setSelectedServices([...selectedServices, { serviceId: svc._id, name: svc.name, price: svc.price, qty: 1 }]);
     }
   };
 
-  // Subtotal and Final amount live calculations
-  const subtotal = selectedServices.reduce((sum, item) => sum + item.price, 0);
+  const changeQty = (serviceId, delta) => {
+    setSelectedServices(prev =>
+      prev.map(item => item.serviceId === serviceId ? { ...item, qty: item.qty + delta } : item)
+          .filter(item => item.qty > 0)
+    );
+  };
+
+  // Subtotal: sum of (price × qty)
+  const subtotal = selectedServices.reduce((sum, item) => sum + item.price * item.qty, 0);
   const finalAmount = Math.max(0, subtotal - discount);
 
   // Categories list
@@ -155,7 +165,10 @@ export default function CustomerEntry() {
       customerName,
       customerPhone,
       staffId: selectedStaff,
-      services: selectedServices,
+      // Expand services by qty: Haircut x2 = two {name, price} entries
+      services: selectedServices.flatMap(item =>
+        Array.from({ length: item.qty }, () => ({ name: item.name, price: item.price }))
+      ),
       discount: Number(discount),
       paymentMode,
       paymentBreakdown: paymentMode === 'Mixed' ? paymentBreakdown : { cash: 0, upi: 0, card: 0 },
@@ -289,19 +302,24 @@ export default function CustomerEntry() {
               <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quick Add popular services</span>
               <div className="flex flex-wrap gap-2">
                 {servicesList.slice(0, 5).map(svc => {
-                  const isAdded = selectedServices.some(item => item.serviceId === svc._id);
+                  const existing = selectedServices.find(item => item.serviceId === svc._id);
                   return (
                     <button
                       key={svc._id}
                       type="button"
                       onClick={() => toggleService(svc)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
-                        isAdded 
+                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                        existing 
                           ? 'bg-accent/15 border-accent text-accent-dark shadow-sm'
                           : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                       }`}
                     >
                       + {svc.name.replace(/\(.*?\)/, '').trim()} (₹{svc.price})
+                      {existing && (
+                        <span className="bg-accent-dark text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ml-0.5">
+                          ×{existing.qty}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -375,20 +393,28 @@ export default function CustomerEntry() {
               <div className="space-y-2 pt-2">
                 <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Currently Added</span>
                 <div className="flex flex-wrap gap-2">
-                  {selectedServices.map((item, idx) => (
+                  {selectedServices.map((item) => (
                     <div 
-                      key={idx} 
-                      className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold text-slate-700 hover:border-red-150 transition-colors"
+                      key={item.serviceId} 
+                      className="flex items-center gap-2 px-3 py-2 bg-accent/10 border border-accent/30 rounded-xl text-xs font-semibold text-accent-dark"
                     >
-                      <span>{item.name}</span>
-                      <span className="text-slate-400 font-extrabold">₹{item.price}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedServices(selectedServices.filter(s => s.serviceId !== item.serviceId))}
-                        className="text-slate-450 hover:text-red-650 font-bold ml-1 text-sm leading-none"
-                      >
-                        ×
-                      </button>
+                      <span className="font-bold">{item.name}</span>
+                      <span className="text-slate-500 font-bold">₹{item.price}</span>
+                      {/* Qty Controls */}
+                      <div className="flex items-center gap-1 ml-1 bg-white rounded-lg px-1.5 py-0.5 border border-accent/20">
+                        <button
+                          type="button"
+                          onClick={() => changeQty(item.serviceId, -1)}
+                          className="w-4 h-4 flex items-center justify-center text-red-400 hover:text-red-600 font-extrabold text-sm leading-none"
+                        >−</button>
+                        <span className="text-xs font-extrabold text-slate-800 min-w-[16px] text-center">{item.qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => changeQty(item.serviceId, 1)}
+                          className="w-4 h-4 flex items-center justify-center text-emerald-500 hover:text-emerald-700 font-extrabold text-sm leading-none"
+                        >+</button>
+                      </div>
+                      <span className="font-extrabold text-accent-dark ml-1">= ₹{item.price * item.qty}</span>
                     </div>
                   ))}
                 </div>
