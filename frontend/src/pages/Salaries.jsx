@@ -287,18 +287,16 @@ export default function Salaries() {
 
                     {/* Commission percentage input */}
                     <td className="py-4.5 px-4 w-32">
-                      <div className="relative w-24">
-                        <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400 font-bold text-[10px]">
-                          %
-                        </span>
+                      <div className="flex items-center gap-1.5 w-24">
                         <input
                           type="number"
                           value={edits.commission}
                           onChange={(e) => handleInputChange(st._id, 'commission', e.target.value)}
-                          className="form-input !py-1.5 !pr-7 !pl-3 text-xs font-bold w-full"
+                          className="form-input !py-1.5 text-center text-xs font-bold w-14 shrink-0"
                           min={0}
                           max={100}
                         />
+                        <span className="font-bold text-slate-400 text-xs shrink-0">%</span>
                       </div>
                     </td>
 

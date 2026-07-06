@@ -650,6 +650,15 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
 
     const entries = await Entry.find({ createdAt: { $gte: range.start, $lte: range.end } }).populate('customer').populate('staff');
 
+    const servicesCatalog = await Service.find({});
+    const serviceCatalogMap = {};
+    servicesCatalog.forEach(s => {
+      serviceCatalogMap[s.name] = s;
+      if (s._id) {
+        serviceCatalogMap[s._id.toString()] = s;
+      }
+    });
+
     let revenue = 0, customerCount = entries.length, discountTotal = 0, dueTotal = 0, productCostTotal = 0, cash = 0, upi = 0, card = 0;
     const staffStats = {}, serviceStats = {}, dailyStats = {};
 
@@ -657,7 +666,33 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
       revenue += entry.finalAmount;
       discountTotal += entry.discount;
       dueTotal += entry.dueAmount || 0;
-      productCostTotal += entry.totalProductCost || 0;
+      
+      let entryProductCost = 0;
+      let entryServiceRevenue = 0;
+
+      (entry.services || []).forEach(svc => {
+        let isSplit = !!svc.isSplit;
+        let productPrice = Number(svc.productPrice || 0);
+        let servicePrice = Number(svc.servicePrice || 0);
+
+        if (!isSplit || productPrice === 0) {
+          const catSvc = serviceCatalogMap[svc.name] || (svc.serviceId ? serviceCatalogMap[svc.serviceId.toString()] : null);
+          if (catSvc && catSvc.isSplit) {
+            isSplit = true;
+            productPrice = catSvc.productPrice || 0;
+            servicePrice = svc.price - productPrice;
+          }
+        }
+
+        if (isSplit) {
+          entryProductCost += productPrice;
+          entryServiceRevenue += servicePrice;
+        } else {
+          entryServiceRevenue += svc.price;
+        }
+      });
+
+      productCostTotal += entryProductCost;
       cash += entry.paymentBreakdown.cash || 0;
       upi += entry.paymentBreakdown.upi || 0;
       card += entry.paymentBreakdown.card || 0;
@@ -668,7 +703,7 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
         staffStats[staffId] = { name: staffName, revenue: 0, totalBilled: 0, count: 0 }; 
       }
       
-      const commissionBase = entry.totalServiceRevenue !== undefined ? Math.max(0, entry.totalServiceRevenue - entry.discount) : entry.finalAmount;
+      const commissionBase = Math.max(0, entryServiceRevenue - entry.discount);
       staffStats[staffId].revenue += commissionBase;
       staffStats[staffId].totalBilled += entry.finalAmount;
       staffStats[staffId].count += 1;
@@ -781,6 +816,15 @@ router.get('/reports/staff/:staffId', requireAdminOrSuperAdmin, async (req, res)
       createdAt: { $gte: range.start, $lte: range.end }
     }).populate('customer');
 
+    const servicesCatalog = await Service.find({});
+    const serviceCatalogMap = {};
+    servicesCatalog.forEach(s => {
+      serviceCatalogMap[s.name] = s;
+      if (s._id) {
+        serviceCatalogMap[s._id.toString()] = s;
+      }
+    });
+
     let totalVisits = entries.length;
     let grossBilledSales = 0;
     let totalProductCost = 0;
@@ -789,10 +833,44 @@ router.get('/reports/staff/:staffId', requireAdminOrSuperAdmin, async (req, res)
 
     const logs = entries.map(entry => {
       grossBilledSales += entry.finalAmount;
-      totalProductCost += entry.totalProductCost || 0;
-      totalServiceRevenue += entry.totalServiceRevenue || 0;
+      
+      let entryProductCost = 0;
+      let entryServiceRevenue = 0;
 
-      const commissionBase = entry.totalServiceRevenue !== undefined ? Math.max(0, entry.totalServiceRevenue - entry.discount) : entry.finalAmount;
+      const servicesMapped = (entry.services || []).map(svc => {
+        let isSplit = !!svc.isSplit;
+        let productPrice = Number(svc.productPrice || 0);
+        let servicePrice = Number(svc.servicePrice || 0);
+
+        if (!isSplit || productPrice === 0) {
+          const catSvc = serviceCatalogMap[svc.name] || (svc.serviceId ? serviceCatalogMap[svc.serviceId.toString()] : null);
+          if (catSvc && catSvc.isSplit) {
+            isSplit = true;
+            productPrice = catSvc.productPrice || 0;
+            servicePrice = svc.price - productPrice;
+          }
+        }
+
+        if (isSplit) {
+          entryProductCost += productPrice;
+          entryServiceRevenue += servicePrice;
+        } else {
+          entryServiceRevenue += svc.price;
+        }
+
+        return {
+          name: svc.name,
+          price: svc.price,
+          isSplit,
+          productPrice,
+          servicePrice
+        };
+      });
+
+      totalProductCost += entryProductCost;
+      totalServiceRevenue += entryServiceRevenue;
+
+      const commissionBase = Math.max(0, entryServiceRevenue - entry.discount);
       const commEarned = Math.round((commissionBase * (staff.commission || 0)) / 100);
       totalCommissionEarned += commEarned;
 
@@ -801,17 +879,11 @@ router.get('/reports/staff/:staffId', requireAdminOrSuperAdmin, async (req, res)
         date: entry.createdAt,
         customerName: entry.customer?.name || 'Walk-in',
         customerPhone: entry.customer?.phone || 'N/A',
-        services: entry.services.map(s => ({
-          name: s.name,
-          price: s.price,
-          isSplit: s.isSplit,
-          productPrice: s.productPrice,
-          servicePrice: s.servicePrice
-        })),
+        services: servicesMapped,
         discount: entry.discount,
         finalAmount: entry.finalAmount,
-        productCost: entry.totalProductCost || 0,
-        serviceRevenue: entry.totalServiceRevenue || entry.finalAmount,
+        productCost: entryProductCost,
+        serviceRevenue: entryServiceRevenue,
         commissionBase,
         commissionEarned: commEarned
       };

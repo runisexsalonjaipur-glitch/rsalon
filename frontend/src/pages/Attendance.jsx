@@ -295,7 +295,7 @@ export default function Attendance() {
               return (
                 <div key={st._id} className="bg-white p-6 rounded-[28px] shadow-soft border border-slate-100/60 space-y-5 flex flex-col justify-between">
                   {/* Stylist Details */}
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-50">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-50">
                     <div>
                       <h3 className="font-extrabold text-slate-800 text-sm block">{st.name}</h3>
                       <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mt-0.5">{st.role}</span>
