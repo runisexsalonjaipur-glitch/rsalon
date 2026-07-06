@@ -279,6 +279,7 @@ router.post('/entries', requireAdminOrSuperAdmin, async (req, res) => {
     const populated = await Entry.findById(entry._id).populate('customer').populate('staff');
     res.status(201).json(populated);
   } catch (error) {
+    console.error('Error saving customer entry:', error);
     res.status(500).json({ message: 'Failed to save customer entry', error: error.message });
   }
 });
@@ -335,27 +336,89 @@ router.delete('/entries/:id', requireSuperAdmin, async (req, res) => {
 // --- DASHBOARD STATISTICS (Optimized: 6 parallel aggregations) ---
 router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
   try {
-    const days = Number(req.query.days) || 7;
+    let filterType = req.query.filterType;
     const serviceName = req.query.serviceName || 'All';
 
-    const today = getDateRange('today');
+    // Backward-compatibility: if days parameter is supplied instead of filterType
+    if (!filterType && req.query.days) {
+      const d = Number(req.query.days);
+      if (d === 1) filterType = 'today';
+      else if (d === 2) filterType = 'yesterday';
+      else if (d === 7) filterType = '7days';
+      else if (d === 15) filterType = '15days'; // fallback to last 30
+      else if (d === 30) filterType = '30days';
+      else filterType = '7days';
+    }
+    if (!filterType) filterType = 'today';
+
+    const now = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+
+    switch (filterType) {
+      case 'today':
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'yesterday':
+        startDate.setDate(startDate.getDate() - 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setDate(endDate.getDate() - 1);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case '7days':
+        startDate.setDate(startDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case '30days':
+        startDate.setDate(startDate.getDate() - 29);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case '90days':
+      case '3months':
+        startDate.setDate(startDate.getDate() - 89);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'this_month':
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      default:
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+    }
+
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
+    // Determine days to display in trend chart
+    let chartDays = 7;
+    if (filterType === '30days') {
+      chartDays = 30;
+    } else if (filterType === '90days' || filterType === '3months') {
+      chartDays = 90;
+    } else if (filterType === 'this_month') {
+      chartDays = now.getDate();
+    }
+
     const chartStart = new Date();
-    chartStart.setDate(chartStart.getDate() - (days - 1));
+    chartStart.setDate(chartStart.getDate() - (chartDays - 1));
     chartStart.setHours(0, 0, 0, 0);
 
     const svcMatch = serviceName !== 'All' ? { 'services.name': serviceName } : {};
 
     // ALL queries run in PARALLEL — no sequential waiting
-    const [todayEntries, recentEntries, monthlyAgg, chartAgg, topStaffAgg, topServicesAgg] = await Promise.all([
+    const [periodEntries, recentEntries, monthlyAgg, chartAgg, topStaffAgg, topServicesAgg] = await Promise.all([
 
-      // 1. Today entries (lean = fast, no Mongoose overhead)
-      Entry.find({ createdAt: { $gte: today.start, $lte: today.end }, ...svcMatch }).lean(),
+      // 1. Period entries (lean = fast, no Mongoose overhead)
+      Entry.find({ createdAt: { $gte: startDate, $lte: endDate }, ...svcMatch }).lean(),
 
-      // 2. Recent 5 entries with partial populate
+      // 2. Recent 5 entries with partial populate (unfiltered, live feed)
       Entry.find().populate('customer', 'name phone').populate('staff', 'name role').sort({ createdAt: -1 }).limit(5).lean(),
 
       // 3. Monthly revenue — single aggregation
@@ -366,7 +429,7 @@ router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
 
       // 4. Chart data — 1 aggregation instead of N separate queries!
       Entry.aggregate([
-        { $match: { createdAt: { $gte: chartStart }, ...svcMatch } },
+        { $match: { createdAt: { $gte: chartStart, $lte: now }, ...svcMatch } },
         { $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: '+05:30' } },
           revenue: { $sum: '$finalAmount' },
@@ -375,8 +438,9 @@ router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
         { $sort: { _id: 1 } }
       ]),
 
-      // 5. Top staff aggregation with lookup
+      // 5. Top staff aggregation with lookup (filtered by period)
       Entry.aggregate([
+        { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
         { $group: { _id: '$staff', revenue: { $sum: '$finalAmount' }, customers: { $sum: 1 } } },
         { $sort: { revenue: -1 } },
         { $limit: 5 },
@@ -385,8 +449,9 @@ router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
         { $project: { name: '$info.name', role: '$info.role', revenue: 1, customers: 1 } }
       ]),
 
-      // 6. Top services aggregation
+      // 6. Top services aggregation (filtered by period)
       Entry.aggregate([
+        { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
         { $unwind: '$services' },
         { $group: { _id: '$services.name', count: { $sum: 1 }, revenue: { $sum: '$services.price' } } },
         { $sort: { count: -1 } },
@@ -395,23 +460,23 @@ router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
       ])
     ]);
 
-    // Process today stats
-    let todayRevenue = 0, todayCash = 0, todayUpi = 0, todayCard = 0, todayServicesCount = 0;
-    todayEntries.forEach(e => {
-      todayRevenue += e.finalAmount;
-      todayServicesCount += e.services.length;
-      todayCash += e.paymentBreakdown?.cash || 0;
-      todayUpi += e.paymentBreakdown?.upi || 0;
-      todayCard += e.paymentBreakdown?.card || 0;
+    // Process period stats
+    let periodRevenue = 0, periodCash = 0, periodUpi = 0, periodCard = 0, periodServicesCount = 0;
+    periodEntries.forEach(e => {
+      periodRevenue += e.finalAmount;
+      periodServicesCount += e.services.length;
+      periodCash += e.paymentBreakdown?.cash || 0;
+      periodUpi += e.paymentBreakdown?.upi || 0;
+      periodCard += e.paymentBreakdown?.card || 0;
     });
-    const todayCustomers = todayEntries.length;
-    const averageBill = todayCustomers > 0 ? Math.round(todayRevenue / todayCustomers) : 0;
+    const periodCustomers = periodEntries.length;
+    const averageBill = periodCustomers > 0 ? Math.round(periodRevenue / periodCustomers) : 0;
 
     // Build chart — fill missing days with 0
     const chartMap = {};
     chartAgg.forEach(d => { chartMap[d._id] = d; });
     const dailyRevenueChart = [];
-    for (let i = days - 1; i >= 0; i--) {
+    for (let i = chartDays - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
@@ -420,11 +485,11 @@ router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
     }
 
     res.json({
-      todayRevenue,
-      todayCustomers,
-      todayServicesCount,
+      todayRevenue: periodRevenue, // keep property name for seamless frontend integration
+      todayCustomers: periodCustomers,
+      todayServicesCount: periodServicesCount,
       averageBill,
-      paymentSplit: { cash: todayCash, upi: todayUpi, card: todayCard },
+      paymentSplit: { cash: periodCash, upi: periodUpi, card: periodCard },
       recentEntries,
       monthlyRevenue: monthlyAgg[0]?.revenue || 0,
       monthlyCustomers: monthlyAgg[0]?.count || 0,

@@ -287,17 +287,20 @@ const buildMockModelClass = (modelName) => {
       return new MockQueryChain(modelName, Promise.resolve(list));
     }
 
-    static async findOne(query = {}) {
+    static findOne(query = {}) {
       const chain = this.find(query);
-      const list = await chain._promise;
-      return list.length > 0 ? new MockInstance(list[0]) : null;
+      const next = chain._promise.then(list => list.length > 0 ? new MockInstance(list[0]) : null);
+      return new MockQueryChain(modelName, next);
     }
 
-    static async findById(id) {
-      if (!id) return null;
-      const list = readJson(modelName);
-      const item = list.find(item => item._id === id.toString());
-      return item ? new MockInstance(item) : null;
+    static findById(id) {
+      const next = Promise.resolve().then(() => {
+        if (!id) return null;
+        const list = readJson(modelName);
+        const item = list.find(item => item._id === id.toString());
+        return item ? new MockInstance(item) : null;
+      });
+      return new MockQueryChain(modelName, next);
     }
 
     static async findByIdAndUpdate(id, updateData, options = {}) {
@@ -385,7 +388,148 @@ const buildMockModelClass = (modelName) => {
     }
 
     static async aggregate(pipeline = []) {
-      return [];
+      let list = readJson(modelName);
+      
+      for (const stage of pipeline) {
+        if (stage.$match) {
+          list = list.filter(item => {
+            for (const key in stage.$match) {
+              const queryVal = stage.$match[key];
+              if (key === 'createdAt' && queryVal && typeof queryVal === 'object') {
+                const itemTime = new Date(item.createdAt).getTime();
+                if (queryVal.$gte) {
+                  const limit = new Date(queryVal.$gte).getTime();
+                  if (itemTime < limit) return false;
+                }
+                if (queryVal.$lte) {
+                  const limit = new Date(queryVal.$lte).getTime();
+                  if (itemTime > limit) return false;
+                }
+              } else if (key === 'services.name') {
+                const hasSvc = item.services && item.services.some(s => s.name === queryVal);
+                if (!hasSvc) return false;
+              } else if (queryVal !== undefined) {
+                const itemVal = item[key];
+                if ((itemVal || '').toString() !== queryVal.toString()) return false;
+              }
+            }
+            return true;
+          });
+        } else if (stage.$unwind) {
+          const path = typeof stage.$unwind === 'string' ? stage.$unwind.replace('$', '') : stage.$unwind.path.replace('$', '');
+          const unwound = [];
+          list.forEach(item => {
+            const arr = item[path];
+            if (Array.isArray(arr)) {
+              arr.forEach(element => {
+                unwound.push({ ...item, [path]: element });
+              });
+            } else if (arr) {
+              unwound.push({ ...item, [path]: arr });
+            } else if (stage.$unwind.preserveNullAndEmptyArrays) {
+              unwound.push({ ...item, [path]: null });
+            }
+          });
+          list = unwound;
+        } else if (stage.$group) {
+          const { _id, ...accumulators } = stage.$group;
+          const groups = {};
+          
+          list.forEach(item => {
+            let groupKey = '';
+            if (_id === null) {
+              groupKey = 'null';
+            } else if (typeof _id === 'string' && _id.startsWith('$')) {
+              const field = _id.replace('$', '');
+              groupKey = (item[field] || 'null').toString();
+            } else if (typeof _id === 'object' && _id.$dateToString) {
+              const dateField = _id.$dateToString.date.replace('$', '');
+              const dateVal = new Date(item[dateField]);
+              if (!isNaN(dateVal.getTime())) {
+                const offsetDate = new Date(dateVal.getTime() + (5.5 * 60 * 60 * 1000));
+                groupKey = offsetDate.toISOString().slice(0, 10);
+              } else {
+                groupKey = 'null';
+              }
+            }
+            
+            if (!groups[groupKey]) {
+              groups[groupKey] = { _id: _id === null ? null : groupKey };
+              for (const accName in accumulators) {
+                groups[groupKey][accName] = 0;
+              }
+            }
+            
+            for (const accName in accumulators) {
+              const accObj = accumulators[accName];
+              if (accObj.$sum) {
+                let sumVal = 0;
+                if (typeof accObj.$sum === 'number') {
+                  sumVal = accObj.$sum;
+                } else if (typeof accObj.$sum === 'string' && accObj.$sum.startsWith('$')) {
+                  const field = accObj.$sum.replace('$', '');
+                  if (field.includes('.')) {
+                    const [p, c] = field.split('.');
+                    sumVal = Number(item[p]?.[c] || 0);
+                  } else {
+                    sumVal = Number(item[field] || 0);
+                  }
+                }
+                groups[groupKey][accName] += sumVal;
+              }
+            }
+          });
+          
+          list = Object.values(groups);
+        } else if (stage.$sort) {
+          const sortField = Object.keys(stage.$sort)[0];
+          const dir = stage.$sort[sortField];
+          list.sort((a, b) => {
+            let valA = a[sortField];
+            let valB = b[sortField];
+            if (valA < valB) return dir === -1 ? 1 : -1;
+            if (valA > valB) return dir === -1 ? -1 : 1;
+            return 0;
+          });
+        } else if (stage.$limit) {
+          list = list.slice(0, stage.$limit);
+        } else if (stage.$lookup) {
+          const { from, localField, foreignField, as } = stage.$lookup;
+          const targetList = readJson(from === 'staff' ? 'Staff' : from === 'services' ? 'Service' : from);
+          list.forEach(item => {
+            const localVal = item[localField];
+            const matches = targetList.filter(t => (t[foreignField] || '').toString() === (localVal || '').toString());
+            item[as] = matches;
+          });
+        } else if (stage.$project) {
+          const proj = stage.$project;
+          list = list.map(item => {
+            const newItem = {};
+            for (const key in proj) {
+              if (proj[key] === 1) {
+                newItem[key] = item[key];
+              } else if (typeof proj[key] === 'string' && proj[key].startsWith('$')) {
+                const sourceField = proj[key].replace('$', '');
+                if (sourceField.includes('.')) {
+                  const parts = sourceField.split('.');
+                  let current = item;
+                  for (const part of parts) {
+                    current = current?.[part];
+                  }
+                  newItem[key] = current;
+                } else {
+                  newItem[key] = item[sourceField];
+                }
+              }
+            }
+            if (proj._id === 0) {
+              delete newItem._id;
+            }
+            return newItem;
+          });
+        }
+      }
+      return list;
     }
   };
 };
@@ -443,7 +587,21 @@ class Customer {
   static insertMany(arr) { return useMock ? MockCustomer.insertMany(arr) : MongooseCustomer.insertMany(arr); }
   static deleteMany(q) { return useMock ? MockCustomer.deleteMany(q) : MongooseCustomer.deleteMany(q); }
   static updateMany(q, u) { return useMock ? MockCustomer.updateMany(q, u) : MongooseCustomer.updateMany(q, u); }
-  static populate(d, o) { return useMock ? d : MongooseCustomer.populate(d, o); }
+  static populate(d, o) {
+    if (useMock) {
+      const customers = readJson('Customer');
+      const list = Array.isArray(d) ? d : [d];
+      list.forEach(item => {
+        if (item && item._id) {
+          const custId = item._id.toString();
+          const match = customers.find(c => c._id === custId);
+          item._id = match || { _id: custId, name: 'Walk-in', phone: '0000000000' };
+        }
+      });
+      return d;
+    }
+    return MongooseCustomer.populate(d, o);
+  }
 }
 
 class Entry {

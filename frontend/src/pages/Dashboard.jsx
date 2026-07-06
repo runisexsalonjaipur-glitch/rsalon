@@ -11,7 +11,9 @@ import {
   Clock,
   Sparkles,
   Smartphone,
-  Wallet
+  Wallet,
+  Calendar,
+  Filter
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import apiCall from '../api';
@@ -32,7 +34,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(!cachedStats); // no skeleton if cache exists
   const [staff, setStaff] = useState(cachedStaff);
   const [servicesList, setServicesList] = useState(cachedServices);
-  const [days, setDays] = useState(2); // Default to Today & Yesterday (2 days)
+  const [filterType, setFilterType] = useState('today');
   const [selectedService, setSelectedService] = useState('All');
   const role = localStorage.getItem('role');
 
@@ -42,11 +44,10 @@ export default function Dashboard() {
       if (!cachedStats) setLoading(true);
 
       const [statsRes, staffRes, serviceRes] = await Promise.all([
-        apiCall('/dashboard/stats?days=2&serviceName=All'), // Default to 2 days
+        apiCall('/dashboard/stats?filterType=today&serviceName=All'),
         apiCall('/staff'),
         apiCall('/services')
       ]);
-
 
       const activeStaff = staffRes.filter(s => s.status === 'active').slice(0, 5);
 
@@ -67,12 +68,15 @@ export default function Dashboard() {
     }
   };
 
-  const handleFilterChange = async (newDays, newService) => {
+  const handleFilterChange = async (newFilterType, newService) => {
     try {
-      const res = await apiCall(`/dashboard/stats?days=${newDays}&serviceName=${encodeURIComponent(newService)}`);
+      setLoading(true);
+      const res = await apiCall(`/dashboard/stats?filterType=${newFilterType}&serviceName=${encodeURIComponent(newService)}`);
       setStats(res);
     } catch (err) {
       toast.error('Failed to update analytics');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,6 +88,94 @@ export default function Dashboard() {
 
   // Format currency helper
   const formatAmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN')}`;
+
+  // Card labels mapping based on selected filter
+  const getCardLabel = (base) => {
+    const mapping = {
+      revenue: {
+        today: "Today's Revenue",
+        yesterday: "Yesterday's Revenue",
+        '7days': "7 Days Revenue",
+        '30days': "30 Days Revenue",
+        '90days': "3 Months Revenue",
+        this_month: "This Month Revenue"
+      },
+      visits: {
+        today: "Today's Visits",
+        yesterday: "Yesterday's Visits",
+        '7days': "7 Days Visits",
+        '30days': "30 Days Visits",
+        '90days': "3 Months Visits",
+        this_month: "This Month Visits"
+      },
+      services: {
+        today: "Today's Services",
+        yesterday: "Yesterday's Services",
+        '7days': "7 Days Services",
+        '30days': "30 Days Services",
+        '90days': "3 Months Services",
+        this_month: "This Month Services"
+      },
+      avgTicket: {
+        today: "Today's Avg Ticket",
+        yesterday: "Yesterday's Avg Ticket",
+        '7days': "7 Days Avg Ticket",
+        '30days': "30 Days Avg Ticket",
+        '90days': "3 Months Avg Ticket",
+        this_month: "This Month Avg Ticket"
+      }
+    };
+    return mapping[base]?.[filterType] || base;
+  };
+
+  const getFilterRangeDescription = () => {
+    const now = new Date();
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
+    
+    switch (filterType) {
+      case 'today':
+        return `Today (${now.toLocaleDateString('en-US', options)})`;
+      case 'yesterday': {
+        const yest = new Date();
+        yest.setDate(yest.getDate() - 1);
+        return `Yesterday (${yest.toLocaleDateString('en-US', options)})`;
+      }
+      case '7days': {
+        const start = new Date();
+        start.setDate(start.getDate() - 6);
+        return `Last 7 Days (${start.toLocaleDateString('en-US', options)} - ${now.toLocaleDateString('en-US', options)})`;
+      }
+      case '30days': {
+        const start = new Date();
+        start.setDate(start.getDate() - 29);
+        return `Last 30 Days (${start.toLocaleDateString('en-US', options)} - ${now.toLocaleDateString('en-US', options)})`;
+      }
+      case '90days': {
+        const start = new Date();
+        start.setDate(start.getDate() - 89);
+        return `Last 3 Months (${start.toLocaleDateString('en-US', options)} - ${now.toLocaleDateString('en-US', options)})`;
+      }
+      case 'this_month': {
+        const start = new Date();
+        start.setDate(1);
+        return `This Month (${start.toLocaleDateString('en-US', options)} - ${now.toLocaleDateString('en-US', options)})`;
+      }
+      default:
+        return '';
+    }
+  };
+
+  const getPaymentModeTitle = () => {
+    const mapping = {
+      today: "Today's Payment Modes",
+      yesterday: "Yesterday's Payment Modes",
+      '7days': "7 Days Payment Modes",
+      '30days': "30 Days Payment Modes",
+      '90days': "3 Months Payment Modes",
+      this_month: "This Month Payment Modes"
+    };
+    return mapping[filterType] || "Payment Modes";
+  };
 
   // Helper for Payment Percentages
   const cashVal = stats?.paymentSplit?.cash || 0;
@@ -126,6 +218,60 @@ export default function Dashboard() {
         </Link>
       </div>
 
+      {/* Global Filter Bar */}
+      <div className="bg-white p-4 rounded-2xl shadow-soft border border-slate-100/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl self-start">
+            {[
+              { label: 'Today', value: 'today' },
+              { label: 'Yesterday', value: 'yesterday' },
+              { label: 'Last 7 Days', value: '7days' },
+              { label: 'Last 30 Days', value: '30days' },
+              { label: 'Last 3 Months', value: '90days' },
+              { label: 'This Month', value: 'this_month' }
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  setFilterType(opt.value);
+                  handleFilterChange(opt.value, selectedService);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  filterType === opt.value
+                    ? 'bg-white text-slate-800 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-[11px] text-slate-450 font-semibold tracking-wide flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" /> {getFilterRangeDescription()}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
+            <Filter className="w-3.5 h-3.5 text-slate-400" /> Service:
+          </span>
+          <select
+            value={selectedService}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedService(val);
+              handleFilterChange(filterType, val);
+            }}
+            className="form-input !py-1.5 !px-3 text-xs font-bold text-slate-755 bg-white border border-slate-200 cursor-pointer min-w-[150px] max-w-[200px]"
+          >
+            <option value="All">All Services</option>
+            {servicesList.map(s => (
+              <option key={s._id} value={s.name}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Statistics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {/* Today's Revenue */}
@@ -134,7 +280,7 @@ export default function Dashboard() {
             <IndianRupee className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">Today's Revenue</span>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">{getCardLabel('revenue')}</span>
             {loading ? <Sk w="w-16" h="h-6" /> : (
               <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(stats?.todayRevenue)}</span>
             )}
@@ -147,7 +293,7 @@ export default function Dashboard() {
             <Users className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">Today's Visits</span>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">{getCardLabel('visits')}</span>
             {loading ? <Sk w="w-10" h="h-6" /> : (
               <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{stats?.todayCustomers ?? 0}</span>
             )}
@@ -173,7 +319,7 @@ export default function Dashboard() {
               <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">Services Sold</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">{getCardLabel('services')}</span>
               {loading ? <Sk w="w-14" h="h-6" /> : (
                 <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{stats?.todayServicesCount ?? 0} Sold</span>
               )}
@@ -187,11 +333,10 @@ export default function Dashboard() {
             <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">Average Ticket</span>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">{getCardLabel('avgTicket')}</span>
             {loading ? <Sk w="w-14" h="h-6" /> : (
               <span className="text-base sm:text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(stats?.averageBill)}</span>
             )}
-          </div>
         </div>
       </div>
 
@@ -202,42 +347,7 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-50">
             <div>
               <h3 className="font-bold text-slate-800 text-sm">Business Revenue Analytics</h3>
-              <p className="text-xs text-slate-450 font-medium mt-0.5">Track daily sales growth and service demand dynamics</p>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Days Selector Dropdown */}
-              <select
-                value={days}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  setDays(val);
-                  handleFilterChange(val, selectedService);
-                }}
-                className="form-input !py-1.5 !px-2.5 text-[11px] font-bold text-slate-650 bg-white cursor-pointer"
-              >
-                <option value="1">Today Only</option>
-                <option value="2">Today & Yesterday</option>
-                <option value="7">Last 7 Days</option>
-                <option value="15">Last 15 Days</option>
-                <option value="30">Last 30 Days</option>
-              </select>
-
-              {/* Service Selector Dropdown */}
-              <select
-                value={selectedService}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedService(val);
-                  handleFilterChange(days, val);
-                }}
-                className="form-input !py-1.5 !px-2.5 text-[11px] font-bold text-slate-650 bg-white cursor-pointer max-w-[130px] sm:max-w-[160px]"
-              >
-                <option value="All">All Services</option>
-                {servicesList.map(s => (
-                  <option key={s._id} value={s.name}>{s.name}</option>
-                ))}
-              </select>
+              <p className="text-xs text-slate-450 font-medium mt-0.5">Track daily sales growth and service demand dynamics (Hover over bars for details)</p>
             </div>
           </div>
 
@@ -250,7 +360,7 @@ export default function Dashboard() {
             </div>
           ) : chartData.length > 0 ? (() => {
             // Layout constants
-            const padL = 54, padR = 16, padT = 24, padB = 32;
+            const padL = 54, padR = 16, padT = 36, padB = 32;
             const plotW = chartWidth - padL - padR;
             const plotH = chartHeight - padT - padB;
 
@@ -306,7 +416,7 @@ export default function Dashboard() {
 
                     {/* Bars */}
                     {bars.map((b, idx) => (
-                      <g key={idx}>
+                      <g key={idx} className="group cursor-pointer">
                         {/* Bar background track */}
                         <rect
                           x={b.x} y={padT}
@@ -321,21 +431,21 @@ export default function Dashboard() {
                           fill={b.revenue > 0 ? 'url(#bar-gradient)' : 'url(#bar-gradient-empty)'}
                           style={{ filter: b.revenue > 0 ? 'drop-shadow(0 4px 6px rgba(219,39,119,0.25))' : 'none' }}
                         />
-                        {/* Value badge above bar */}
+                        {/* Value badge on hover */}
                         {b.revenue > 0 && (
-                          <>
+                          <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
                             <rect
-                              x={b.x + b.barW / 2 - 22} y={b.y - 24}
-                              width="44" height="17"
-                              rx="8" fill="#BE185D"
+                              x={b.x + b.barW / 2 - 26} y={b.y - 26}
+                              width="52" height="18"
+                              rx="6" fill="#1E293B"
                             />
-                            <text x={b.x + b.barW / 2} y={b.y - 12}
+                            <text x={b.x + b.barW / 2} y={b.y - 14}
                               textAnchor="middle"
-                              fill="#fff" fontSize="8.5" fontWeight="800"
+                              fill="#fff" fontSize="9" fontWeight="800"
                             >
                               {b.revenue >= 1000 ? `₹${(b.revenue / 1000).toFixed(1)}k` : `₹${b.revenue}`}
                             </text>
-                          </>
+                          </g>
                         )}
                       </g>
                     ))}
@@ -357,7 +467,7 @@ export default function Dashboard() {
               </div>
             );
           })() : (
-            <div className="h-72 flex items-center justify-center text-xs text-slate-400">
+            <div className="h-72 flex items-center justify-center text-xs text-slate-450">
               No data available for the selected period
             </div>
           )}
@@ -369,9 +479,9 @@ export default function Dashboard() {
         {/* Payment Breakdown Card */}
         <div className="bg-white p-6 rounded-[28px] shadow-soft border border-slate-100/60 flex flex-col justify-between">
           <div>
-            <h3 className="font-bold text-slate-800 text-sm">Today's Payments Mode</h3>
+            <h3 className="font-bold text-slate-800 text-sm">{getPaymentModeTitle()}</h3>
             <p className="text-xs text-slate-400">Breakdown of collections by modes</p>
-          </div>
+          </div>      </div>
 
           <div className="my-6 space-y-4">
             {/* Cash */}

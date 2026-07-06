@@ -165,9 +165,9 @@ export default function CustomerEntry() {
       customerName,
       customerPhone,
       staffId: selectedStaff,
-      // Expand services by qty: Haircut x2 = two {name, price} entries
+      // Expand services by qty: Haircut x2 = two {serviceId, name, price} entries
       services: selectedServices.flatMap(item =>
-        Array.from({ length: item.qty }, () => ({ name: item.name, price: item.price }))
+        Array.from({ length: item.qty }, () => ({ serviceId: item.serviceId, name: item.name, price: item.price }))
       ),
       discount: Number(discount),
       paymentMode,
