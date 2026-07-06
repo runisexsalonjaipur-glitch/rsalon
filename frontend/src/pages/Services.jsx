@@ -37,6 +37,9 @@ export default function Services() {
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('active');
   const [isNewCategory, setIsNewCategory] = useState(false);
+  const [isSplit, setIsSplit] = useState(false);
+  const [productPrice, setProductPrice] = useState('');
+  const [servicePrice, setServicePrice] = useState('');
 
   // Dynamic category calculations
   const defaultCategories = ['Hair Cut', 'Hair Spa', 'Hair Color', 'Facial', 'Beard', 'Keratin', 'Smoothening', 'Wax', 'Cleanup'];
@@ -67,6 +70,9 @@ export default function Services() {
     setCategory(mergedCategories[0] || 'Hair Cut');
     setIsNewCategory(false);
     setStatus('active');
+    setIsSplit(false);
+    setProductPrice('');
+    setServicePrice('');
     setShowModal(true);
   };
 
@@ -78,6 +84,9 @@ export default function Services() {
     setCategory(svc.category);
     setIsNewCategory(false);
     setStatus(svc.status);
+    setIsSplit(svc.isSplit || false);
+    setProductPrice(svc.productPrice || '');
+    setServicePrice(svc.servicePrice || '');
     setShowModal(true);
   };
 
@@ -92,12 +101,34 @@ export default function Services() {
       toast.error('Please enter a valid price greater than zero');
       return;
     }
+    if (isSplit) {
+      if (productPrice === '' || Number(productPrice) < 0) {
+        toast.error('Please enter a valid product cost');
+        return;
+      }
+      if (servicePrice === '' || Number(servicePrice) < 0) {
+        toast.error('Please enter a valid service price');
+        return;
+      }
+      if (Number(productPrice) + Number(servicePrice) !== Number(price)) {
+        toast.error(`The sum of Product Cost (₹${productPrice}) and Service Price (₹${servicePrice}) must equal the Standard Price (₹${price})`);
+        return;
+      }
+    }
     if (!category.trim()) {
       toast.error('Service Category is required');
       return;
     }
 
-    const payload = { name, price: Number(price), category, status };
+    const payload = { 
+      name, 
+      price: Number(price), 
+      category, 
+      status,
+      isSplit,
+      productPrice: isSplit ? Number(productPrice) : 0,
+      servicePrice: isSplit ? Number(servicePrice) : Number(price)
+    };
 
     try {
       if (modalMode === 'create') {
@@ -237,7 +268,14 @@ export default function Services() {
                         <div className="w-9 h-9 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent-dark">
                           <Scissors className="w-4 h-4" />
                         </div>
-                        <span className="font-bold text-slate-800">{svc.name}</span>
+                        <div>
+                          <span className="font-bold text-slate-800 block">{svc.name}</span>
+                          {svc.isSplit && (
+                            <span className="inline-block mt-0.5 text-[9px] font-bold text-rose-650 bg-rose-50/50 px-1.5 py-0.5 rounded border border-rose-100">
+                              Split: Product ₹{svc.productPrice} + Service ₹{svc.servicePrice}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 font-semibold text-slate-500">{svc.category}</td>
@@ -321,7 +359,14 @@ export default function Services() {
                     type="number"
                     placeholder="500"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => {
+                      const pVal = e.target.value;
+                      setPrice(pVal);
+                      if (isSplit && pVal) {
+                        setServicePrice(pVal);
+                        setProductPrice(0);
+                      }
+                    }}
                     className="form-input text-xs"
                   />
                 </div>
@@ -339,6 +384,65 @@ export default function Services() {
                   </select>
                 </div>
               </div>
+
+              {/* Split Product & Service Checkbox */}
+              <div className="flex items-center gap-2 py-1">
+                <input
+                  type="checkbox"
+                  id="isSplit"
+                  checked={isSplit}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsSplit(checked);
+                    if (checked && price) {
+                      setServicePrice(price);
+                      setProductPrice(0);
+                    }
+                  }}
+                  className="rounded border-slate-350 text-accent focus:ring-accent w-4 h-4 cursor-pointer"
+                />
+                <label htmlFor="isSplit" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                  Split Product & Service Cost (for Commission)
+                </label>
+              </div>
+
+              {/* Conditional Split Inputs */}
+              {isSplit && (
+                <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl grid grid-cols-2 gap-3 animate-fadeIn">
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Product Cost (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 500"
+                      value={productPrice}
+                      onChange={(e) => {
+                        const prod = e.target.value;
+                        setProductPrice(prod);
+                        if (price) {
+                          setServicePrice(Math.max(0, Number(price) - Number(prod)));
+                        }
+                      }}
+                      className="form-input text-xs bg-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Service Price (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 1000"
+                      value={servicePrice}
+                      onChange={(e) => {
+                        const serv = e.target.value;
+                        setServicePrice(serv);
+                        if (price) {
+                          setProductPrice(Math.max(0, Number(price) - Number(serv)));
+                        }
+                      }}
+                      className="form-input text-xs bg-white font-bold"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Category */}
               <div>

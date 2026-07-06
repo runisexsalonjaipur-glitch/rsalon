@@ -90,6 +90,7 @@ export default function Reports() {
     lines.push(`${escapeCSV('Total Sales Billed (INR)')},${summary.revenue}`);
     lines.push(`${escapeCSV('Total Visit Entries')},${summary.customerCount}`);
     lines.push(`${escapeCSV('Outstanding Dues (INR)')},${summary.dueTotal || 0}`);
+    lines.push(`${escapeCSV('Product Cost / Material Expenses (INR)')},${summary.productCostTotal || 0}`);
     lines.push(`${escapeCSV('Average Spend Per Ticket')},${summary.averageBill}`);
     lines.push(`${escapeCSV('Promotional Discounts Deducted')},${summary.discountTotal}`);
     lines.push(`${escapeCSV('Cash Collections')},${summary.payments?.cash || 0}`);
@@ -211,7 +212,7 @@ export default function Reports() {
       </div>
 
       {/* Summary KPI Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
         {/* Total revenue */}
         <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-5 col-span-2 sm:col-span-1">
           <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm shrink-0">
@@ -242,6 +243,17 @@ export default function Reports() {
           <div>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Outstanding Dues</span>
             <span className="text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.dueTotal)}</span>
+          </div>
+        </div>
+
+        {/* Product Cost */}
+        <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm shrink-0">
+            <Scissors className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Product Cost</span>
+            <span className="text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.productCostTotal)}</span>
           </div>
         </div>
 

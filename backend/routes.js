@@ -106,11 +106,19 @@ router.get('/services', requireAdminOrSuperAdmin, async (req, res) => {
 
 router.post('/services', requireSuperAdmin, async (req, res) => {
   try {
-    const { name, price, category, status } = req.body;
+    const { name, price, category, status, isSplit, productPrice, servicePrice } = req.body;
     if (!name || !price || !category) {
       return res.status(400).json({ message: 'Name, price, and category are required' });
     }
-    const service = new Service({ name, price, category, status });
+    const service = new Service({ 
+      name, 
+      price: Number(price), 
+      category, 
+      status,
+      isSplit: !!isSplit,
+      productPrice: Number(productPrice || 0),
+      servicePrice: Number(servicePrice || 0)
+    });
     await service.save();
     res.status(201).json(service);
   } catch (error) {
@@ -120,8 +128,16 @@ router.post('/services', requireSuperAdmin, async (req, res) => {
 
 router.put('/services/:id', requireSuperAdmin, async (req, res) => {
   try {
-    const { name, price, category, status } = req.body;
-    const service = await Service.findByIdAndUpdate(req.params.id, { name, price, category, status }, { new: true });
+    const { name, price, category, status, isSplit, productPrice, servicePrice } = req.body;
+    const service = await Service.findByIdAndUpdate(req.params.id, { 
+      name, 
+      price: Number(price), 
+      category, 
+      status,
+      isSplit: !!isSplit,
+      productPrice: Number(productPrice || 0),
+      servicePrice: Number(servicePrice || 0)
+    }, { new: true });
     if (!service) return res.status(404).json({ message: 'Service not found' });
     res.json(service);
   } catch (error) {
@@ -265,7 +281,34 @@ router.post('/entries', requireAdminOrSuperAdmin, async (req, res) => {
     if (!staff) return res.status(400).json({ message: 'Selected staff member does not exist' });
 
     let subtotal = 0;
-    for (const item of services) { subtotal += item.price; }
+    let totalProductCost = 0;
+    let totalServiceRevenue = 0;
+
+    const entryServices = (services || []).map(svc => {
+      const isSplit = !!svc.isSplit;
+      const productPrice = Number(svc.productPrice || 0);
+      const servicePrice = Number(svc.servicePrice || 0);
+      const price = Number(svc.price || 0);
+      
+      subtotal += price;
+      
+      if (isSplit) {
+        totalProductCost += productPrice;
+        totalServiceRevenue += servicePrice;
+      } else {
+        totalServiceRevenue += price;
+      }
+
+      return {
+        serviceId: svc.serviceId,
+        name: svc.name,
+        price,
+        isSplit,
+        productPrice,
+        servicePrice
+      };
+    });
+
     const finalAmount = Math.max(0, subtotal - discount);
 
     if (paymentMode === 'Mixed') {
@@ -294,10 +337,12 @@ router.post('/entries', requireAdminOrSuperAdmin, async (req, res) => {
     const entry = new Entry({ 
       customer: customer._id, 
       staff: staffId, 
-      services, 
+      services: entryServices, 
       subtotal, 
       discount, 
       finalAmount, 
+      totalProductCost,
+      totalServiceRevenue,
       paymentMode, 
       paymentBreakdown, 
       dueAmount: paymentMode === 'Partial' ? Number(req.body.dueAmount || 0) : 0,
@@ -605,21 +650,27 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
 
     const entries = await Entry.find({ createdAt: { $gte: range.start, $lte: range.end } }).populate('customer').populate('staff');
 
-    let revenue = 0, customerCount = entries.length, discountTotal = 0, dueTotal = 0, cash = 0, upi = 0, card = 0;
+    let revenue = 0, customerCount = entries.length, discountTotal = 0, dueTotal = 0, productCostTotal = 0, cash = 0, upi = 0, card = 0;
     const staffStats = {}, serviceStats = {}, dailyStats = {};
 
     entries.forEach(entry => {
       revenue += entry.finalAmount;
       discountTotal += entry.discount;
       dueTotal += entry.dueAmount || 0;
+      productCostTotal += entry.totalProductCost || 0;
       cash += entry.paymentBreakdown.cash || 0;
       upi += entry.paymentBreakdown.upi || 0;
       card += entry.paymentBreakdown.card || 0;
 
       const staffId = entry.staff ? entry.staff._id.toString() : 'Unknown';
       const staffName = entry.staff ? entry.staff.name : 'Unknown';
-      if (!staffStats[staffId]) { staffStats[staffId] = { name: staffName, revenue: 0, count: 0 }; }
-      staffStats[staffId].revenue += entry.finalAmount;
+      if (!staffStats[staffId]) { 
+        staffStats[staffId] = { name: staffName, revenue: 0, totalBilled: 0, count: 0 }; 
+      }
+      
+      const commissionBase = entry.totalServiceRevenue !== undefined ? Math.max(0, entry.totalServiceRevenue - entry.discount) : entry.finalAmount;
+      staffStats[staffId].revenue += commissionBase;
+      staffStats[staffId].totalBilled += entry.finalAmount;
       staffStats[staffId].count += 1;
 
       entry.services.forEach(svc => {
@@ -637,7 +688,7 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
     const averageBill = customerCount > 0 ? Math.round(revenue / customerCount) : 0;
 
     res.json({
-      summary: { revenue, customerCount, averageBill, discountTotal, dueTotal, payments: { cash, upi, card } },
+      summary: { revenue, customerCount, averageBill, discountTotal, dueTotal, productCostTotal, payments: { cash, upi, card } },
       staffPerformance: Object.values(staffStats).sort((a, b) => b.revenue - a.revenue),
       serviceSales: Object.values(serviceStats).sort((a, b) => b.count - a.count),
       chartData: Object.values(dailyStats)

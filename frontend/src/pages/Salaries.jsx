@@ -126,7 +126,7 @@ export default function Salaries() {
   let totalCommissions = 0;
 
   const staffPayouts = staff.map(st => {
-    const perf = performanceMap[st.name] || { revenue: 0, count: 0 };
+    const perf = performanceMap[st.name] || { revenue: 0, count: 0, totalBilled: 0 };
     const edits = salaryEdits[st._id] || { salary: st.salary || 0, commission: st.commission || 0 };
     
     const commissionVal = Math.round((perf.revenue * edits.commission) / 100);
@@ -138,6 +138,7 @@ export default function Salaries() {
     return {
       ...st,
       revenue: perf.revenue,
+      totalBilled: perf.totalBilled !== undefined ? perf.totalBilled : perf.revenue,
       visits: perf.count,
       commissionEarned: commissionVal,
       totalPayout
@@ -205,7 +206,8 @@ export default function Salaries() {
                 <th className="py-4 px-4">Sales Billed</th>
                 <th className="py-4 px-4">Base Fixed Salary</th>
                 <th className="py-4 px-4">Commission Rate</th>
-                <th className="py-4 px-4">Referrals Volume</th>
+                <th className="py-4 px-4">Gross Billed Sales</th>
+                <th className="py-4 px-4">Commissionable Base (Service)</th>
                 <th className="py-4 px-4">Commission Due</th>
                 <th className="py-4 px-4">Total Payout</th>
                 <th className="py-4 px-6 text-right">Actions</th>
@@ -262,8 +264,13 @@ export default function Salaries() {
                       </div>
                     </td>
 
+                    {/* Gross Billed Sales */}
+                    <td className="py-4.5 px-4 font-bold text-slate-650">
+                      ₹{st.totalBilled.toLocaleString('en-IN')}
+                    </td>
+
                     {/* Revenue generated */}
-                    <td className="py-4.5 px-4 font-bold text-slate-800">
+                    <td className="py-4.5 px-4 font-bold text-slate-850">
                       ₹{st.revenue.toLocaleString('en-IN')}
                     </td>
 

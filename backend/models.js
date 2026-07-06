@@ -36,6 +36,9 @@ const mongooseServiceSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   category: { type: String, required: true },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  isSplit: { type: Boolean, default: false },
+  productPrice: { type: Number, default: 0 },
+  servicePrice: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -51,11 +54,16 @@ const mongooseEntrySchema = new mongoose.Schema({
   services: [{
     serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
     name: { type: String, required: true },
-    price: { type: Number, required: true }
+    price: { type: Number, required: true },
+    isSplit: { type: Boolean, default: false },
+    productPrice: { type: Number, default: 0 },
+    servicePrice: { type: Number, default: 0 }
   }],
   subtotal: { type: Number, required: true },
   discount: { type: Number, default: 0 },
   finalAmount: { type: Number, required: true },
+  totalProductCost: { type: Number, default: 0 },
+  totalServiceRevenue: { type: Number, default: 0 },
   paymentMode: { type: String, enum: ['Cash', 'UPI', 'Card', 'Mixed', 'Partial'], required: true },
   paymentBreakdown: {
     cash: { type: Number, default: 0 },

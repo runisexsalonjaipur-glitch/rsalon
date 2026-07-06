@@ -47,6 +47,9 @@ export default function CustomerEntry() {
   const [customServiceName, setCustomServiceName] = useState('');
   const [customServicePrice, setCustomServicePrice] = useState('');
   const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customIsSplit, setCustomIsSplit] = useState(false);
+  const [customProductCost, setCustomProductCost] = useState('');
+  const [customServiceCost, setCustomServiceCost] = useState('');
 
   // Autocomplete customer search
   const [customerSearchResults, setCustomerSearchResults] = useState([]);
@@ -141,7 +144,15 @@ export default function CustomerEntry() {
         item.serviceId === svc._id ? { ...item, qty: item.qty + 1 } : item
       ));
     } else {
-      setSelectedServices([...selectedServices, { serviceId: svc._id, name: svc.name, price: svc.price, qty: 1 }]);
+      setSelectedServices([...selectedServices, { 
+        serviceId: svc._id, 
+        name: svc.name, 
+        price: svc.price, 
+        qty: 1,
+        isSplit: svc.isSplit || false,
+        productPrice: svc.productPrice || 0,
+        servicePrice: svc.servicePrice || svc.price
+      }]);
     }
   };
 
@@ -157,9 +168,26 @@ export default function CustomerEntry() {
       toast.error('Please enter a custom service name');
       return;
     }
-    if (Number(customServicePrice) <= 0) {
+    const priceVal = Number(customServicePrice);
+    if (priceVal <= 0) {
       toast.error('Please enter a valid price');
       return;
+    }
+
+    let pCost = 0;
+    let sCost = priceVal;
+
+    if (customIsSplit) {
+      pCost = Number(customProductCost || 0);
+      sCost = Number(customServiceCost || 0);
+      if (pCost < 0 || sCost < 0) {
+        toast.error('Product cost and service price must be positive numbers');
+        return;
+      }
+      if (pCost + sCost !== priceVal) {
+        toast.error(`The sum of product cost (₹${pCost}) and service price (₹${sCost}) must equal the custom price (₹${priceVal})`);
+        return;
+      }
     }
 
     const hexObjectId = (() => {
@@ -173,14 +201,20 @@ export default function CustomerEntry() {
       {
         serviceId: hexObjectId,
         name: customServiceName.trim() + ' (Custom)',
-        price: Number(customServicePrice),
+        price: priceVal,
         qty: 1,
-        isCustom: true
+        isCustom: true,
+        isSplit: customIsSplit,
+        productPrice: pCost,
+        servicePrice: sCost
       }
     ]);
 
     setCustomServiceName('');
     setCustomServicePrice('');
+    setCustomIsSplit(false);
+    setCustomProductCost('');
+    setCustomServiceCost('');
     setShowCustomForm(false);
     toast.success('Custom service added!');
   };
@@ -522,7 +556,7 @@ export default function CustomerEntry() {
                         placeholder="Service name / Note"
                         value={customServiceName}
                         onChange={(e) => setCustomServiceName(e.target.value)}
-                        className="form-input text-xs bg-white"
+                        className="form-input text-xs bg-white font-semibold"
                       />
                     </div>
                     <div>
@@ -530,18 +564,88 @@ export default function CustomerEntry() {
                         type="number"
                         placeholder="Amount (₹)"
                         value={customServicePrice}
-                        onChange={(e) => setCustomServicePrice(e.target.value)}
-                        className="form-input text-xs bg-white text-right"
+                        onChange={(e) => {
+                          const pVal = e.target.value;
+                          setCustomServicePrice(pVal);
+                          if (customIsSplit && pVal) {
+                            setCustomServiceCost(pVal);
+                            setCustomProductCost(0);
+                          }
+                        }}
+                        className="form-input text-xs bg-white text-right font-bold"
                       />
                     </div>
                   </div>
-                  <div className="flex gap-2 justify-end">
+
+                  {/* Split Product & Service Checkbox */}
+                  <div className="flex items-center gap-2 py-1">
+                    <input
+                      type="checkbox"
+                      id="customIsSplit"
+                      checked={customIsSplit}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setCustomIsSplit(checked);
+                        if (checked && customServicePrice) {
+                          setCustomServiceCost(customServicePrice);
+                          setCustomProductCost(0);
+                        }
+                      }}
+                      className="rounded border-slate-350 text-accent focus:ring-accent w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="customIsSplit" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                      Split Product & Service Cost
+                    </label>
+                  </div>
+
+                  {/* Conditional Split Inputs */}
+                  {customIsSplit && (
+                    <div className="p-3 bg-white border border-slate-200/65 rounded-xl grid grid-cols-2 gap-3 animate-fadeIn">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Product Cost (₹)</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 500"
+                          value={customProductCost}
+                          onChange={(e) => {
+                            const prod = e.target.value;
+                            setCustomProductCost(prod);
+                            if (customServicePrice) {
+                              setCustomServiceCost(Math.max(0, Number(customServicePrice) - Number(prod)));
+                            }
+                          }}
+                          className="form-input text-xs bg-slate-50/50 font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Service Price (₹)</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 1000"
+                          value={customServiceCost}
+                          onChange={(e) => {
+                            const serv = e.target.value;
+                            setCustomServiceCost(serv);
+                            if (customServicePrice) {
+                              setCustomProductCost(Math.max(0, Number(customServicePrice) - Number(serv)));
+                            }
+                          }}
+                          className="form-input text-xs bg-slate-50/50 font-bold"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 justify-end pt-1">
                     <button
                       type="button"
                       onClick={() => {
                         setShowCustomForm(false);
                         setCustomServiceName('');
                         setCustomServicePrice('');
+                        setCustomIsSplit(false);
+                        setCustomProductCost('');
+                        setCustomServiceCost('');
                       }}
                       className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-650 rounded-lg text-xs font-semibold"
                     >
@@ -567,10 +671,17 @@ export default function CustomerEntry() {
                   {selectedServices.map((item) => (
                     <div 
                       key={item.serviceId} 
-                      className="flex items-center gap-2 px-3 py-2 bg-accent/10 border border-accent/30 rounded-xl text-xs font-semibold text-accent-dark"
+                      className="flex items-center flex-wrap gap-2 px-3 py-2.5 bg-accent/10 border border-accent/30 rounded-xl text-xs font-semibold text-accent-dark"
                     >
-                      <span className="font-bold">{item.name}</span>
-                      <span className="text-slate-500 font-bold">₹{item.price}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold">{item.name}</span>
+                        {item.isSplit && (
+                          <span className="text-[9px] font-bold text-rose-650 bg-white/70 px-1.5 py-0.5 rounded border border-rose-100/60 mt-0.5">
+                            Prod: ₹{item.productPrice} | Serv: ₹{item.servicePrice}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-slate-500 font-bold ml-1">₹{item.price}</span>
                       {/* Qty Controls */}
                       <div className="flex items-center gap-1 ml-1 bg-white rounded-lg px-1.5 py-0.5 border border-accent/20">
                         <button
@@ -619,9 +730,16 @@ export default function CustomerEntry() {
             {selectedServices.length > 0 ? (
               <div className="space-y-2 border-b border-slate-50 pb-4 max-h-40 overflow-y-auto">
                 {selectedServices.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs text-slate-600">
-                    <span className="truncate max-w-[150px] font-medium">{item.name}</span>
-                    <span className="font-semibold text-slate-800">₹{item.price}</span>
+                  <div key={idx} className="flex justify-between items-start text-xs text-slate-605">
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate max-w-[150px] font-semibold text-slate-700">{item.name}</span>
+                      {item.isSplit && (
+                        <span className="text-[9px] font-bold text-slate-400">
+                          (Prod: ₹{item.productPrice} | Serv: ₹{item.servicePrice})
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-bold text-slate-800">₹{item.price * item.qty}</span>
                   </div>
                 ))}
               </div>
