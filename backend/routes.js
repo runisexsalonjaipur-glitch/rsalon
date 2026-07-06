@@ -933,6 +933,11 @@ router.post('/salaries/payout', requireSuperAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Staff ID, month, and total paid amount are required' });
     }
 
+    const existingPayout = await SalaryPayout.findOne({ staff: staffId, month });
+    if (existingPayout) {
+      return res.status(400).json({ message: `Salary payout already recorded for this stylist in ${month}` });
+    }
+
     const payout = new SalaryPayout({
       staff: staffId,
       month,

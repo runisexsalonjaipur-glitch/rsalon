@@ -37,22 +37,38 @@ export default function Salaries() {
   // Record payout modal states
   const [showPayModal, setShowPayModal] = useState(false);
   const [payTargetStaff, setPayTargetStaff] = useState(null);
-  
-  // Calculate default dates
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const firstDay = `${year}-${month}-01`;
-  const todayStr = now.toISOString().slice(0, 10);
 
-  const [payStartDate, setPayStartDate] = useState(firstDay);
-  const [payEndDate, setPayEndDate] = useState(todayStr);
+  // Default month helper
+  const getInitialPayrollMonth = () => {
+    const now = new Date();
+    if (now.getDate() <= 10) {
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return prev.toISOString().slice(0, 7);
+    }
+    return now.toISOString().slice(0, 7);
+  };
+
+  const [payrollMonth, setPayrollMonth] = useState(getInitialPayrollMonth);
+  const [showPaidStylists, setShowPaidStylists] = useState(false);
+
+  // Calculate default start and end dates based on selected month
+  const getMonthDateRange = (monthStr) => {
+    if (!monthStr) return { start: '', end: '' };
+    const [year, m] = monthStr.split('-').map(Number);
+    const start = `${monthStr}-01`;
+    const lastDayVal = new Date(year, m, 0).getDate();
+    const end = `${monthStr}-${String(lastDayVal).padStart(2, '0')}`;
+    return { start, end };
+  };
+
+  const { start: defaultStart, end: defaultEnd } = getMonthDateRange(payrollMonth);
+  const [payStartDate, setPayStartDate] = useState(defaultStart);
+  const [payEndDate, setPayEndDate] = useState(defaultEnd);
   const [payBase, setPayBase] = useState(0);
   const [payCommission, setPayCommission] = useState(0);
   const [payMethod, setPayMethod] = useState('UPI'); // 'UPI', 'Cash'
   const [payNotes, setPayNotes] = useState('');
   const [payingPayout, setPayingPayout] = useState(false);
-  const [showPaidStylists, setShowPaidStylists] = useState(false);
 
   const role = localStorage.getItem('role');
   const isSuperAdmin = role === 'super_admin';
@@ -60,9 +76,10 @@ export default function Salaries() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const { start, end } = getMonthDateRange(payrollMonth);
       const [staffRes, reportRes, payoutsRes] = await Promise.all([
         apiCall('/staff'),
-        apiCall('/reports'),
+        apiCall(`/reports?filterType=custom&startDate=${start}&endDate=${end}`),
         apiCall('/salaries/payout')
       ]);
       setStaff(staffRes.filter(s => s.status === 'active'));
@@ -103,7 +120,7 @@ export default function Salaries() {
     if (isSuperAdmin) {
       fetchData();
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, payrollMonth]);
 
   useEffect(() => {
     if (activeTab === 'history') {
@@ -244,10 +261,9 @@ export default function Salaries() {
       ? Math.round(((st.salary || 0) * presentCount) / totalWorkingDays)
       : (st.salary || 0);
 
-    const currentMonthStr = new Date().toISOString().slice(0, 7);
     const matchedPayout = (payoutHistory || []).find(p => {
       const pStaffId = p.staff?._id || p.staff;
-      return pStaffId === st._id && p.month === currentMonthStr;
+      return pStaffId === st._id && p.month === payrollMonth;
     });
     const isPaid = !!matchedPayout;
 
@@ -315,6 +331,31 @@ export default function Salaries() {
       {activeTab === 'payroll' ? (
         /* TAB 1: ACTIVE PAYROLL CONFIG & PENDING PAYOUTS */
         <div className="space-y-8">
+          {/* Active Payroll Controls */}
+          <div className="bg-white p-6 rounded-[28px] shadow-soft border border-slate-100/60 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-650 flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-slate-400" /> Payroll Month:
+              </span>
+              <input
+                type="month"
+                value={payrollMonth}
+                onChange={(e) => setPayrollMonth(e.target.value)}
+                className="px-4 py-2 bg-slate-50 border border-slate-200 text-xs rounded-xl focus:outline-none focus:border-accent text-slate-800 font-bold"
+              />
+            </div>
+            
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-650 cursor-pointer bg-slate-50 hover:bg-slate-100 px-3.5 py-2.5 rounded-xl border border-slate-200/60 select-none transition">
+              <input
+                type="checkbox"
+                checked={showPaidStylists}
+                onChange={(e) => setShowPaidStylists(e.target.checked)}
+                className="w-3.5 h-3.5 rounded text-accent focus:ring-accent border-slate-350 cursor-pointer"
+              />
+              <span>Show Paid Stylists</span>
+            </label>
+          </div>
+
           {/* KPI Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-[28px] border border-slate-100/60 shadow-soft flex items-center justify-between">
@@ -350,20 +391,9 @@ export default function Salaries() {
 
           {/* Active Payroll: Desktop View Table */}
           <div className="hidden md:block bg-white rounded-[28px] border border-slate-100/60 shadow-soft overflow-hidden">
-            <div className="p-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-bold text-slate-800 text-sm">Staff Compensation Ledger</h3>
-                <p className="text-xs text-slate-400">Configure parameters and record payroll payouts per stylist</p>
-              </div>
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-650 cursor-pointer bg-slate-50 hover:bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200/60 select-none transition">
-                <input
-                  type="checkbox"
-                  checked={showPaidStylists}
-                  onChange={(e) => setShowPaidStylists(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded text-accent focus:ring-accent border-slate-350 cursor-pointer"
-                />
-                <span>Show Paid Stylists</span>
-              </label>
+            <div className="p-6 border-b border-slate-50">
+              <h3 className="font-bold text-slate-800 text-sm">Staff Compensation Ledger</h3>
+              <p className="text-xs text-slate-400">Configure parameters and record payroll payouts per stylist</p>
             </div>
 
             <div className="overflow-x-auto">
