@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Hair Cut (Classic)",
+    "price": 300,
+    "category": "Hair Cut",
+    "status": "active",
+    "_id": "6a4b3826733623098fa0499f",
+    "createdAt": "2026-07-06T05:07:50.256Z"
+  },
+  {
+    "name": "Hair Cut (Advanced)",
+    "price": 500,
+    "category": "Hair Cut",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a0",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  },
+  {
+    "name": "Beard Styling",
+    "price": 150,
+    "category": "Beard",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a1",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  },
+  {
+    "name": "Hair Spa (Loreal)",
+    "price": 800,
+    "category": "Hair Spa",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a2",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  },
+  {
+    "name": "Hair Color (Global)",
+    "price": 1500,
+    "category": "Hair Color",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a3",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  },
+  {
+    "name": "Premium Facial",
+    "price": 1200,
+    "category": "Facial",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a4",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  },
+  {
+    "name": "Keratin Treatment",
+    "price": 3500,
+    "category": "Keratin",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a5",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  },
+  {
+    "name": "Smoothening",
+    "price": 4500,
+    "category": "Smoothening",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a6",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  },
+  {
+    "name": "Detan Cleanup",
+    "price": 600,
+    "category": "Cleanup",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a7",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  },
+  {
+    "name": "Waxing (Full Arms)",
+    "price": 400,
+    "category": "Wax",
+    "status": "active",
+    "_id": "6a4b3826733623098fa049a8",
+    "createdAt": "2026-07-06T05:07:50.257Z"
+  }
+]

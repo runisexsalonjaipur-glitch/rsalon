@@ -1,0 +1,262 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply bg-bg text-primary antialiased;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
+}
+
+/* Glassmorphism custom classes */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.4);
+}
+
+.glass-modal {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+/* Active sidebar item gradient overlay */
+.active-nav-link {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.05) 100%);
+  color: #D97706;
+  border-left: 4px solid #FBBF24;
+}
+
+/* Custom buttons */
+.btn-primary {
+  @apply px-5 py-2.5 bg-primary text-white font-medium rounded-2xl hover:bg-primary-light transition-all duration-200 active:scale-95 flex items-center justify-center gap-2;
+}
+
+.btn-secondary {
+  @apply px-5 py-2.5 bg-white border border-slate-200 text-primary font-medium rounded-2xl hover:bg-slate-50 transition-all duration-200 active:scale-95 flex items-center justify-center gap-2;
+}
+
+.btn-accent {
+  @apply px-5 py-2.5 bg-accent text-primary font-semibold rounded-2xl hover:bg-accent-dark hover:text-white transition-all duration-200 active:scale-95 flex items-center justify-center gap-2;
+}
+
+.form-input {
+  @apply w-full px-4 py-3 bg-white border border-slate-200 text-slate-900 rounded-2xl focus:outline-none focus:border-accent transition-all duration-200 placeholder:text-slate-400;
+}
+
+/* Global fix for inputs/selects/forms with left icons */
+.relative > .absolute + .form-input,
+.relative > .absolute + select,
+.relative > .absolute + input {
+  padding-left: 2.75rem !important;
+}
+
+/* Responsive mobile font size scaling */
+@media (max-width: 640px) {
+  html {
+    font-size: 13.5px !important;
+  }
+}
+
+/* ========================================================
+   PREMIUM WARM BEIGE/CREAM DESIGN SYSTEM
+   ======================================================== */
+html {
+  font-size: 14px; /* Standard balanced viewport size scaling */
+}
+
+/* Snug desktop page margins to avoid wasted space */
+main {
+  padding: 1rem !important; /* tight, premium layout clearance */
+}
+
+/* Bright, clean pink-white ambient background gradient */
+body, .bg-bg, .bg-slate-50 {
+  background: linear-gradient(135deg, #FFFDFD 0%, #FFF0F5 100%) !important; /* soft lavender blush */
+  color: #1E293B;
+}
+
+/* Sidebar background - Premium vertical pink-white fade */
+aside {
+  background: linear-gradient(to bottom, #FFFFFF 0%, #FFF5F7 100%) !important;
+  border-right: 1px solid #FBCFE8 !important; /* pink-200 */
+}
+
+/* Top header background styling */
+header.glass-nav {
+  background: rgba(255, 253, 253, 0.8) !important;
+  border-bottom: 1px solid #FBCFE8 !important;
+}
+
+/* Clean, premium card containers - Soft gradient from pure white to warm pink-white */
+.bg-white, .bg-surface {
+  background: linear-gradient(135deg, #FFFFFF 75%, #FFF0F6 100%) !important;
+  border: none !important;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 30px -5px rgba(244, 114, 182, 0.06), 0 4px 12px -2px rgba(244, 114, 182, 0.03) !important;
+}
+
+/* Form input fields - Sleek pink outline */
+.form-input {
+  background-color: #FFFFFF !important;
+  border: 1px solid #FBCFE8 !important;
+  color: #1E293B !important;
+  border-radius: 12px !important;
+  transition: all 0.25s ease-in-out !important;
+}
+
+.form-input:focus {
+  border-color: #F472B6 !important; /* pink-400 */
+  box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.15) !important;
+}
+
+/* Premium active active-nav-link highlights */
+.active-nav-link {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.2) 0%, rgba(244, 114, 182, 0.05) 100%) !important;
+  color: #DB2777 !important; /* pink-600 active text */
+  border-left: 4px solid #F472B6 !important;
+}
+
+/* Sidebar navigation links hover override - Pink, no blue */
+aside nav a:hover,
+aside nav a:focus,
+aside nav a:active,
+.mobile-nav-link:hover {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.12) 0%, rgba(244, 114, 182, 0.04) 100%) !important;
+  color: #DB2777 !important;
+}
+
+aside nav a:hover svg,
+.mobile-nav-link:hover svg {
+  color: #DB2777 !important;
+}
+
+/* Elegant shadow utilities */
+.shadow-soft {
+  box-shadow: 0 10px 30px -5px rgba(244, 114, 182, 0.06), 0 4px 12px -2px rgba(244, 114, 182, 0.03) !important;
+}
+
+/* Keep Brand Logo container clean white and high contrast */
+.logo-container {
+  background-color: #FFFFFF !important;
+  border: 1px solid #FBCFE8 !important;
+  box-shadow: 0 4px 10px rgba(244, 114, 182, 0.05) !important;
+}
+
+/* Hide all browser scrollbars globally but keep containers scrollable */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  background: transparent !important;
+}
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* Highly visible text overrides - make light grays darker or rose-pink for premium contrast */
+.text-slate-400, 
+p.text-slate-400, 
+span.text-slate-400 {
+  color: #DB2777 !important; /* pink-600 / rose-pink color for highlights */
+}
+
+.text-slate-500, 
+.text-slate-600, 
+.text-slate-650,
+p.text-slate-500,
+td.text-slate-600 {
+  color: #1E293B !important; /* highly visible slate-800 charcoal */
+}
+
+/* Ensure placeholder text is warm pink-rose and visible */
+.form-input::placeholder {
+  color: #F472B6 !important;
+  opacity: 0.65 !important;
+}
+
+/* REDIRECT TAILWIND ACCENT/PRIMARY/AMBER THEME TO ROSE/PINK */
+[class*="bg-primary"],
+.bg-primary {
+  background-color: #DB2777 !important; /* pink-600 */
+}
+
+[class*="text-primary"],
+.text-primary-dark {
+  color: #BE185D !important; /* pink-700 */
+}
+
+/* Global button theme with pink and white hover fade transitions */
+.bg-primary, 
+.btn-accent,
+button[type="submit"],
+.btn-primary {
+  background: linear-gradient(135deg, #DB2777 0%, #F472B6 100%) !important;
+  color: #FFFFFF !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: none !important;
+}
+
+.bg-primary:hover, 
+.btn-accent:hover,
+button[type="submit"]:hover,
+.btn-primary:hover {
+  background: linear-gradient(135deg, #F472B6 0%, #FFFFFF 100%) !important;
+  color: #DB2777 !important; /* text turns rose-pink for high-contrast visibility */
+  border: 1px solid #FBCFE8 !important;
+  box-shadow: 0 4px 15px rgba(219, 39, 119, 0.15) !important;
+}
+
+/* Accent bg and border selectors including opacity classes */
+[class*="bg-accent"],
+.bg-accent, 
+.bg-accent-light, 
+[class*="bg-amber"],
+.bg-amber-50, 
+.bg-amber-100 {
+  background-color: #FFF0F6 !important; /* pink-50 */
+}
+
+[class*="text-accent"],
+.text-accent-dark, 
+[class*="text-amber"],
+.text-amber-650, 
+.text-amber-700 {
+  color: #DB2777 !important; /* pink-600 */
+}
+
+[class*="border-accent"],
+.border-accent, 
+[class*="border-amber"],
+.border-amber-100 {
+  border-color: #FBCFE8 !important; /* pink-200 */
+}
