@@ -212,70 +212,70 @@ export default function Reports() {
       </div>
 
       {/* Summary KPI Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
         {/* Total revenue */}
-        <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-5 col-span-2 sm:col-span-1">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm shrink-0">
-            <IndianRupee className="w-6 h-6" />
+        <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-605 flex items-center justify-center shadow-sm shrink-0">
+            <IndianRupee className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Revenue</span>
-            <span className="text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.revenue)}</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Total Revenue</span>
+            <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.revenue)}</span>
           </div>
         </div>
 
         {/* Visitor entries */}
-        <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm shrink-0">
-            <Users className="w-6 h-6" />
+        <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm shrink-0">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Billed Visits</span>
-            <span className="text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{summary.customerCount} entries</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Billed Visits</span>
+            <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{summary.customerCount} entries</span>
           </div>
         </div>
 
         {/* Outstanding Dues */}
-        <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-sm shrink-0">
-            <Clock className="w-6 h-6 animate-pulse" />
+        <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-sm shrink-0">
+            <Clock className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Outstanding Dues</span>
-            <span className="text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.dueTotal)}</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Outstanding Dues</span>
+            <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.dueTotal)}</span>
           </div>
         </div>
 
         {/* Product Cost */}
-        <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm shrink-0">
-            <Scissors className="w-6 h-6" />
+        <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm shrink-0">
+            <Scissors className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Product Cost</span>
-            <span className="text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.productCostTotal)}</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Product Cost</span>
+            <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.productCostTotal)}</span>
           </div>
         </div>
 
         {/* Ticket average */}
-        <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm shrink-0">
-            <CreditCard className="w-6 h-6" />
+        <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm shrink-0">
+            <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Average Spend</span>
-            <span className="text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.averageBill)}</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Average Spend</span>
+            <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.averageBill)}</span>
           </div>
         </div>
 
         {/* Promo discount deductions */}
-        <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-650 flex items-center justify-center shadow-sm shrink-0">
-            <Gift className="w-6 h-6" />
+        <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-50 text-amber-650 flex items-center justify-center shadow-sm shrink-0">
+            <Gift className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Discounts Given</span>
-            <span className="text-2xl font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.discountTotal)}</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Discounts Given</span>
+            <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(summary.discountTotal)}</span>
           </div>
         </div>
       </div>

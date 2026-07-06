@@ -192,54 +192,54 @@ export default function StaffReport() {
       ) : reportData ? (
         <div className="space-y-6">
           {/* KPI Dashboard */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-4.5">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm shrink-0">
-                <Users className="w-5.5 h-5.5" />
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6">
+            <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm shrink-0">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Visits Handled</span>
-                <span className="text-xl font-extrabold text-slate-800 mt-0.5 block">{reportData.summary.totalVisits} clients</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Visits Handled</span>
+                <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{reportData.summary.totalVisits} clients</span>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-4.5">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm shrink-0">
-                <IndianRupee className="w-5.5 h-5.5" />
+            <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm shrink-0">
+                <IndianRupee className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Gross Sales Billed</span>
-                <span className="text-xl font-extrabold text-slate-800 mt-0.5 block">{formatAmt(reportData.summary.grossBilledSales)}</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Gross Sales</span>
+                <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(reportData.summary.grossBilledSales)}</span>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-4.5">
-              <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm shrink-0">
-                <Scissors className="w-5.5 h-5.5" />
+            <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm shrink-0">
+                <Scissors className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Product Costs</span>
-                <span className="text-xl font-extrabold text-slate-800 mt-0.5 block">{formatAmt(reportData.summary.totalProductCost)}</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Product Costs</span>
+                <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(reportData.summary.totalProductCost)}</span>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-4.5">
-              <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm shrink-0">
-                <Tag className="w-5.5 h-5.5" />
+            <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm shrink-0">
+                <Tag className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Service Revenue</span>
-                <span className="text-xl font-extrabold text-slate-800 mt-0.5 block">{formatAmt(reportData.summary.totalServiceRevenue)}</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Service Rev</span>
+                <span className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight block mt-0.5">{formatAmt(reportData.summary.totalServiceRevenue)}</span>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-4.5 col-span-2 md:col-span-1">
-              <div className="w-12 h-12 rounded-xl bg-pink-50 text-pink-650 flex items-center justify-center shadow-sm shrink-0">
-                <TrendingUp className="w-5.5 h-5.5" />
+            <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-soft border border-slate-100/60 flex items-center gap-3 sm:gap-4 col-span-2 md:col-span-1">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-pink-50 text-pink-650 flex items-center justify-center shadow-sm shrink-0">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Stylist Commission ({reportData.staff.commissionRate}%)</span>
-                <span className="text-xl font-extrabold text-rose-600 mt-0.5 block">{formatAmt(reportData.summary.totalCommissionEarned)}</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block leading-tight">Commission ({reportData.staff.commissionRate}%)</span>
+                <span className="text-base sm:text-lg font-extrabold text-rose-600 tracking-tight block mt-0.5">{formatAmt(reportData.summary.totalCommissionEarned)}</span>
               </div>
             </div>
           </div>
