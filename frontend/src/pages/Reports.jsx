@@ -156,18 +156,18 @@ export default function Reports() {
 
   // SVG Chart sizing
   const maxRevenue = Math.max(...chartData.map(d => d.revenue), 1000);
-  const chartHeight = 150;
-  const chartWidth = 550;
-  const points = chartData.map((d, index) => {
-    const x = (index / (chartData.length - 1 || 1)) * (chartWidth - 50) + 25;
-    const y = chartHeight - (d.revenue / maxRevenue) * (chartHeight - 40) - 20;
-    return { x, y, date: d.date, revenue: d.revenue };
-  });
+  const rptChartH = 220;
+  const rptChartW = Math.max(600, chartData.length * 60);
 
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const areaPath = points.length > 0
-    ? `${linePath} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z`
-    : '';
+  const rptSmoothPath = (pts) => {
+    if (pts.length < 2) return pts.length === 1 ? `M ${pts[0].x} ${pts[0].y}` : '';
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const cpx = (pts[i - 1].x + pts[i].x) / 2;
+      d += ` C ${cpx},${pts[i - 1].y} ${cpx},${pts[i].y} ${pts[i].x},${pts[i].y}`;
+    }
+    return d;
+  };
 
   return (
     <div className="space-y-8">
@@ -277,77 +277,99 @@ export default function Reports() {
             <TrendingUp className="w-5 h-5 text-slate-400" />
           </div>
 
-          {chartData.length > 0 ? (
-            <div className="w-full overflow-x-auto mt-4 pb-2">
-              <div style={{ minWidth: chartData.length > 10 ? `${chartData.length * 44}px` : '100%' }}>
-                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-52 overflow-visible">
-                  <defs>
-                    <linearGradient id="rpt-bar-grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#F472B6" />
-                      <stop offset="100%" stopColor="#BE185D" />
-                    </linearGradient>
-                    <linearGradient id="rpt-zero-grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#FCE7F3" />
-                      <stop offset="100%" stopColor="#FDF2F8" />
-                    </linearGradient>
-                  </defs>
+          {chartData.length > 0 ? (() => {
+            const padL = 54, padR = 16, padT = 24, padB = 32;
+            const plotW = rptChartW - padL - padR;
+            const plotH = rptChartH - padT - padB;
 
-                  {/* Grid lines */}
-                  {[0.25, 0.5, 0.75].map((pct, i) => {
-                    const gy = 10 + (1 - pct) * (chartHeight - 30);
-                    return <line key={i} x1="10" y1={gy} x2={chartWidth - 10} y2={gy}
-                      stroke="#FCE7F3" strokeWidth="1" strokeDasharray="6 4" />;
-                  })}
-                  <line x1="10" y1={chartHeight - 18} x2={chartWidth - 10} y2={chartHeight - 18}
-                    stroke="#FBCFE8" strokeWidth="1.5" />
+            const yTicks = [0, 0.25, 0.5, 0.75, 1].map(pct => ({
+              pct, val: Math.round(maxRevenue * pct),
+              y: padT + plotH * (1 - pct)
+            }));
 
-                  {/* Bars */}
-                  {chartData.map((d, idx) => {
-                    const paddingX = 24;
-                    const avail = chartWidth - paddingX * 2;
-                    const bw = Math.min(32, avail / chartData.length - 10);
-                    const cw = avail / chartData.length;
-                    const bx = paddingX + idx * cw + (cw - bw) / 2;
-                    const maxH = chartHeight - 32;
-                    const bh = d.revenue > 0 ? Math.max((d.revenue / maxRevenue) * maxH, 6) : 6;
-                    const by = chartHeight - bh - 18;
-                    return (
+            const pts = chartData.map((d, i) => ({
+              x: padL + (chartData.length === 1 ? plotW / 2 : (i / (chartData.length - 1)) * plotW),
+              y: padT + plotH * (1 - (d.revenue / maxRevenue)),
+              revenue: d.revenue, date: d.date
+            }));
+
+            const lPath = rptSmoothPath(pts);
+            const aPath = pts.length > 0
+              ? `${lPath} L ${pts[pts.length-1].x},${padT+plotH} L ${pts[0].x},${padT+plotH} Z`
+              : '';
+
+            return (
+              <div className="w-full overflow-x-auto mt-2 pb-1">
+                <div style={{ minWidth: `${rptChartW}px` }}>
+                  <svg viewBox={`0 0 ${rptChartW} ${rptChartH}`} className="w-full h-72 overflow-visible">
+                    <defs>
+                      <linearGradient id="rpt-area-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#EC4899" stopOpacity="0.22" />
+                        <stop offset="70%" stopColor="#F9A8D4" stopOpacity="0.07" />
+                        <stop offset="100%" stopColor="#FDF2F8" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+
+                    {yTicks.map((t, i) => (
+                      <g key={i}>
+                        <line x1={padL} y1={t.y} x2={rptChartW - padR} y2={t.y}
+                          stroke={i === 0 ? '#FBCFE8' : '#FCE7F3'}
+                          strokeWidth={i === 0 ? 1.5 : 1}
+                          strokeDasharray={i === 0 ? '0' : '5 4'} />
+                        <text x={padL - 6} y={t.y + 4} textAnchor="end"
+                          fill="#C084FC" fontSize="9" fontWeight="700">
+                          {t.val >= 1000 ? `₹${(t.val/1000).toFixed(1)}k` : `₹${t.val}`}
+                        </text>
+                      </g>
+                    ))}
+
+                    {aPath && <path d={aPath} fill="url(#rpt-area-grad)" />}
+
+                    {lPath && (
+                      <path d={lPath} fill="none" stroke="#DB2777" strokeWidth="2.5"
+                        strokeLinecap="round" strokeLinejoin="round"
+                        style={{ filter: 'drop-shadow(0 2px 6px rgba(219,39,119,0.3))' }} />
+                    )}
+
+                    {pts.map((p, idx) => (
                       <g key={idx}>
-                        <rect x={bx} y={by} width={bw} height={bh} rx={6}
-                          fill={d.revenue > 0 ? 'url(#rpt-bar-grad)' : 'url(#rpt-zero-grad)'}
-                          style={{ filter: d.revenue > 0 ? 'drop-shadow(0 4px 6px rgba(219,39,119,0.25))' : 'none' }}
-                        />
-                        {d.revenue > 0 && (
+                        {p.revenue > 0 && <circle cx={p.x} cy={p.y} r="7" fill="#FBCFE8" opacity="0.5" />}
+                        <circle cx={p.x} cy={p.y} r="4" fill="#fff"
+                          stroke={p.revenue > 0 ? '#DB2777' : '#FBCFE8'} strokeWidth="2.5"
+                          style={{ filter: p.revenue > 0 ? 'drop-shadow(0 2px 4px rgba(219,39,119,0.3))' : 'none' }} />
+                        {p.revenue > 0 && (
                           <>
-                            <rect x={bx + bw / 2 - 20} y={by - 20} width={40} height={16} rx={6} fill="#BE185D" />
-                            <text x={bx + bw / 2} y={by - 9} textAnchor="middle" fill="#fff" fontSize="8" fontWeight="800">
-                              {d.revenue >= 1000 ? `₹${(d.revenue/1000).toFixed(1)}k` : `₹${d.revenue}`}
+                            <rect x={p.x - 22} y={p.y - 26} width="44" height="17" rx="8" fill="#BE185D" />
+                            <text x={p.x} y={p.y - 14} textAnchor="middle" fill="#fff" fontSize="8.5" fontWeight="800">
+                              {p.revenue >= 1000 ? `₹${(p.revenue/1000).toFixed(1)}k` : `₹${p.revenue}`}
                             </text>
                           </>
                         )}
                       </g>
-                    );
-                  })}
-                </svg>
-                <div className="flex mt-1" style={{ paddingLeft: '24px', paddingRight: '24px' }}>
-                  {chartData.map((d, idx) => {
-                    const cw = 100 / chartData.length;
-                    return (
-                      <div key={idx} className="text-center" style={{ width: `${cw}%` }}>
-                        <span className="text-[9px] font-bold text-slate-400">{d.date?.split(' ')[0]}</span>
-                        <span className="block text-[8px] text-slate-300 font-medium">{d.date?.split(' ')[1]}</span>
-                      </div>
-                    );
-                  })}
+                    ))}
+                  </svg>
+
+                  <div className="flex" style={{ paddingLeft: `${padL}px`, paddingRight: `${padR}px` }}>
+                    {chartData.map((d, idx) => {
+                      const cw = 100 / chartData.length;
+                      return (
+                        <div key={idx} className="text-center" style={{ width: `${cw}%` }}>
+                          <span className="text-[10px] font-bold text-slate-500">{d.date?.split(' ')[0]}</span>
+                          <span className="block text-[9px] text-slate-300 font-semibold">{d.date?.split(' ')[1]}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="h-52 flex flex-col items-center justify-center text-xs text-slate-400 gap-1.5">
+            );
+          })() : (
+            <div className="h-72 flex flex-col items-center justify-center text-xs text-slate-400 gap-1.5">
               <Clock className="w-8 h-8 text-slate-300" />
               Not enough daily data nodes to build trend graph.
             </div>
           )}
+
         </div>
 
         {/* Payments mode split */}
