@@ -1,9 +1,16 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Base URL without /api — used for health ping
+const BASE_URL = API_URL.replace(/\/api$/, '');
 
 // Create helper to get token
 export const getToken = () => localStorage.getItem('token');
 export const getUserRole = () => localStorage.getItem('role');
 export const getUsername = () => localStorage.getItem('username');
+
+// Ping Railway to wake up from cold start (silent — no error thrown)
+export const pingServer = () => {
+  fetch(`${BASE_URL}/`, { method: 'GET' }).catch(() => {});
+};
 
 // Simple header helper
 export const getHeaders = () => {

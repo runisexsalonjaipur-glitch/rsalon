@@ -8,8 +8,27 @@ const { Service, Staff, Customer, Settings, setUseMock } = require('./models');
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Middleware — allow Vercel frontend + local dev
+const allowedOrigins = [
+  'https://rsalon-nine.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:5173',
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Also allow any vercel.app preview deployments
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    return callback(new Error('CORS not allowed: ' + origin));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Default base route

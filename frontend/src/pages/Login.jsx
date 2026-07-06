@@ -1,16 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { Lock, User, ScissorsLineDashed, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import apiCall from '../api';
+import apiCall, { pingServer } from '../api';
 import logoImg from '../assets/logo.png';
 
 export default function Login() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  
+  const [serverReady, setServerReady] = useState(false);
+
+  // Wake up Railway backend immediately when login page loads
+  useEffect(() => {
+    pingServer();
+    // Mark server as warming — after 8s assume it's ready (cold start ~30s max)
+    const timer = setTimeout(() => setServerReady(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const { register, handleSubmit, formState: { errors } } = useForm();
 
   const onSubmit = async (data) => {
@@ -50,6 +59,18 @@ export default function Login() {
           </div>
           <h2 className="text-2xl font-extrabold text-primary-dark tracking-tight">R Unisex Salon</h2>
           <p className="text-xs text-slate-450 mt-1 font-semibold">Sign in to manage your salon operations</p>
+          {!serverReady && (
+            <div className="flex items-center gap-1.5 mt-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+              <span className="text-[10px] font-semibold text-amber-600">Server warming up...</span>
+            </div>
+          )}
+          {serverReady && (
+            <div className="flex items-center gap-1.5 mt-2 bg-green-50 border border-green-200 rounded-xl px-3 py-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full" />
+              <span className="text-[10px] font-semibold text-green-600">Server ready ✓</span>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

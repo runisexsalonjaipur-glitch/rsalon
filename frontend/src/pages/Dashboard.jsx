@@ -61,9 +61,12 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-semibold text-slate-500">Compiling salon intelligence...</p>
+        <div className="text-center">
+          <p className="text-sm font-bold text-slate-600">Loading Dashboard...</p>
+          <p className="text-xs text-slate-400 mt-1">Server is starting up, please wait a moment</p>
+        </div>
       </div>
     );
   }
