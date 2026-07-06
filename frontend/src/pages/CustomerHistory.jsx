@@ -16,7 +16,8 @@ import {
   Download,
   Users,
   Award,
-  History
+  History,
+  Trash2
 } from 'lucide-react';
 import apiCall from '../api';
 import { toast } from 'react-hot-toast';
@@ -50,6 +51,18 @@ export default function CustomerHistory() {
   const [staffList, setStaffList] = useState([]);
   const [serviceList, setServiceList] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const role = localStorage.getItem('role');
+
+  const handleDelete = async (entryId) => {
+    if (!window.confirm('Kya aap is entry ko permanently delete karna chahte hain?')) return;
+    try {
+      await apiCall(`/entries/${entryId}`, { method: 'DELETE' });
+      setEntries(prev => prev.filter(e => e._id !== entryId));
+      toast.success('Entry deleted successfully');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete entry');
+    }
+  };
 
   // Load filter option data lists
   useEffect(() => {
@@ -466,6 +479,7 @@ export default function CustomerHistory() {
                   <th className="px-6 py-4 font-semibold">Purchased Services</th>
                   <th className="px-6 py-4 font-semibold">Payment Info</th>
                   <th className="px-6 py-4 font-semibold text-right">Bill Total</th>
+                  {role === 'super_admin' && <th className="px-6 py-4"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150 text-xs text-slate-650">
@@ -529,6 +543,17 @@ export default function CustomerHistory() {
                         <p className="text-[10px] text-slate-400 line-through font-medium">{formatAmt(entry.subtotal)}</p>
                       )}
                     </td>
+                    {role === 'super_admin' && (
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={() => handleDelete(entry._id)}
+                          className="p-2 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all duration-200"
+                          title="Delete Entry"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -547,7 +572,17 @@ export default function CustomerHistory() {
                     <p className="font-bold text-slate-800">{entry.customer?.name || 'Walk-in'}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{entry.customer?.phone}</p>
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-400">{formatDate(entry.createdAt).split(',')[0]}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-slate-400">{formatDate(entry.createdAt).split(',')[0]}</span>
+                    {role === 'super_admin' && (
+                      <button
+                        onClick={() => handleDelete(entry._id)}
+                        className="p-1.5 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">

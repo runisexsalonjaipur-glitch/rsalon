@@ -22,27 +22,34 @@ export default function Reports() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Load from cache for instant display
+  const cachedReport = (() => { try { return JSON.parse(localStorage.getItem('dash_report') || 'null'); } catch { return null; } })();
+
   // Default to past week
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        setLoading(true);
+        if (!cachedReport) setLoading(true);
         const params = new URLSearchParams();
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
 
-        // Fetching report details
         const res = await apiCall(`/reports?${params.toString()}`);
         setReport(res);
+        // Cache only when no date filter (default range)
+        if (!startDate && !endDate) {
+          localStorage.setItem('dash_report', JSON.stringify(res));
+        }
       } catch (err) {
-        toast.error('Failed to compile reports');
+        if (!cachedReport) toast.error('Failed to compile reports');
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
     
-    // Auto load initially, or on change
+    // Show cached data immediately, then fetch fresh
+    if (cachedReport && !startDate && !endDate) setReport(cachedReport);
     fetchReport();
   }, [startDate, endDate]);
 
@@ -121,11 +128,14 @@ export default function Reports() {
   // Formatting helpers
   const formatAmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN')}`;
 
-  if (loading) {
+  if (loading && !report) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
-        <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-semibold text-slate-500">Compiling database analytics...</p>
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-slate-200 animate-pulse rounded-xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-slate-200 animate-pulse rounded-3xl" />)}
+        </div>
+        <div className="h-72 bg-slate-200 animate-pulse rounded-3xl" />
       </div>
     );
   }
@@ -267,47 +277,69 @@ export default function Reports() {
             <TrendingUp className="w-5 h-5 text-slate-400" />
           </div>
 
-          {chartData.length > 1 ? (
-            <div className="w-full relative mt-4">
-              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-52 overflow-visible">
-                <defs>
-                  <linearGradient id="reports-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#FBBF24" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
+          {chartData.length > 0 ? (
+            <div className="w-full overflow-x-auto mt-4 pb-2">
+              <div style={{ minWidth: chartData.length > 10 ? `${chartData.length * 44}px` : '100%' }}>
+                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-52 overflow-visible">
+                  <defs>
+                    <linearGradient id="rpt-bar-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F472B6" />
+                      <stop offset="100%" stopColor="#BE185D" />
+                    </linearGradient>
+                    <linearGradient id="rpt-zero-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#FCE7F3" />
+                      <stop offset="100%" stopColor="#FDF2F8" />
+                    </linearGradient>
+                  </defs>
 
-                {/* Fill Area */}
-                {areaPath && <path d={areaPath} fill="url(#reports-grad)" />}
+                  {/* Grid lines */}
+                  {[0.25, 0.5, 0.75].map((pct, i) => {
+                    const gy = 10 + (1 - pct) * (chartHeight - 30);
+                    return <line key={i} x1="10" y1={gy} x2={chartWidth - 10} y2={gy}
+                      stroke="#FCE7F3" strokeWidth="1" strokeDasharray="6 4" />;
+                  })}
+                  <line x1="10" y1={chartHeight - 18} x2={chartWidth - 10} y2={chartHeight - 18}
+                    stroke="#FBCFE8" strokeWidth="1.5" />
 
-                {/* Grid */}
-                <line x1="20" y1="20" x2={chartWidth - 20} y2="20" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="20" y1="70" x2={chartWidth - 20} y2="70" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="20" y1="120" x2={chartWidth - 20} y2="120" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-
-                {/* Line */}
-                <path d={linePath} fill="none" stroke="#FBBF24" strokeWidth="3" strokeLinecap="round" />
-
-                {/* Nodes */}
-                {points.map((p, idx) => (
-                  <g key={idx} className="group cursor-pointer">
-                    <circle cx={p.x} cy={p.y} r="3.5" fill="#FFFFFF" stroke="#FBBF24" strokeWidth="2.5" />
-                    <text
-                      x={p.x}
-                      y={p.y - 12}
-                      textAnchor="middle"
-                      className="text-[9px] font-bold text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 duration-200"
-                    >
-                      {formatAmt(p.revenue)}
-                    </text>
-                  </g>
-                ))}
-              </svg>
-              {/* Bottom Labels */}
-              <div className="flex justify-between px-6 mt-2">
-                {chartData.map((d, idx) => (
-                  <span key={idx} className="text-[9px] font-bold text-slate-400">{d.date}</span>
-                ))}
+                  {/* Bars */}
+                  {chartData.map((d, idx) => {
+                    const paddingX = 24;
+                    const avail = chartWidth - paddingX * 2;
+                    const bw = Math.min(32, avail / chartData.length - 10);
+                    const cw = avail / chartData.length;
+                    const bx = paddingX + idx * cw + (cw - bw) / 2;
+                    const maxH = chartHeight - 32;
+                    const bh = d.revenue > 0 ? Math.max((d.revenue / maxRevenue) * maxH, 6) : 6;
+                    const by = chartHeight - bh - 18;
+                    return (
+                      <g key={idx}>
+                        <rect x={bx} y={by} width={bw} height={bh} rx={6}
+                          fill={d.revenue > 0 ? 'url(#rpt-bar-grad)' : 'url(#rpt-zero-grad)'}
+                          style={{ filter: d.revenue > 0 ? 'drop-shadow(0 4px 6px rgba(219,39,119,0.25))' : 'none' }}
+                        />
+                        {d.revenue > 0 && (
+                          <>
+                            <rect x={bx + bw / 2 - 20} y={by - 20} width={40} height={16} rx={6} fill="#BE185D" />
+                            <text x={bx + bw / 2} y={by - 9} textAnchor="middle" fill="#fff" fontSize="8" fontWeight="800">
+                              {d.revenue >= 1000 ? `₹${(d.revenue/1000).toFixed(1)}k` : `₹${d.revenue}`}
+                            </text>
+                          </>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div className="flex mt-1" style={{ paddingLeft: '24px', paddingRight: '24px' }}>
+                  {chartData.map((d, idx) => {
+                    const cw = 100 / chartData.length;
+                    return (
+                      <div key={idx} className="text-center" style={{ width: `${cw}%` }}>
+                        <span className="text-[9px] font-bold text-slate-400">{d.date?.split(' ')[0]}</span>
+                        <span className="block text-[8px] text-slate-300 font-medium">{d.date?.split(' ')[1]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ) : (

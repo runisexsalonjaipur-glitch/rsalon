@@ -240,66 +240,103 @@ export default function Dashboard() {
 
           {/* SVG Bar Chart or Skeleton */}
           {loading ? (
-            <div className="w-full h-44 flex items-end gap-2 px-4 pb-2">
+            <div className="w-full h-48 flex items-end gap-2 px-4 pb-2 mt-4">
               {[60, 80, 45, 90, 55, 70, 40].map((h, i) => (
-                <div key={i} className="flex-1 bg-slate-200 animate-pulse rounded-t-lg" style={{ height: `${h}%` }} />
+                <div key={i} className="flex-1 bg-slate-200 animate-pulse rounded-t-xl" style={{ height: `${h}%` }} />
               ))}
             </div>
           ) : chartData.length > 0 ? (
             <div className="w-full overflow-x-auto mt-4 pb-2">
-              <div style={{ minWidth: chartData.length > 10 ? `${chartData.length * 36}px` : '100%' }}>
-                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-44 overflow-visible">
+              <div style={{ minWidth: chartData.length > 10 ? `${chartData.length * 44}px` : '100%' }}>
+                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-48 overflow-visible">
                   <defs>
                     <linearGradient id="bar-grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#EC4899" />
-                      <stop offset="100%" stopColor="#DB2777" />
+                      <stop offset="0%" stopColor="#F472B6" />
+                      <stop offset="100%" stopColor="#BE185D" />
+                    </linearGradient>
+                    <linearGradient id="bar-grad-zero" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#FCE7F3" />
+                      <stop offset="100%" stopColor="#FDF2F8" />
                     </linearGradient>
                   </defs>
 
-                  {/* Grid horizontal markers */}
-                  <line x1="20" y1="15" x2={chartWidth - 20} y2="15" stroke="#FFF0F6" strokeWidth="1" strokeDasharray="4 4" />
-                  <line x1="20" y1="60" x2={chartWidth - 20} y2="60" stroke="#FFF0F6" strokeWidth="1" strokeDasharray="4 4" />
-                  <line x1="20" y1="105" x2={chartWidth - 20} y2="105" stroke="#FFF0F6" strokeWidth="1" strokeDasharray="4 4" />
+                  {/* Subtle grid lines */}
+                  {[0.25, 0.5, 0.75].map((pct, i) => {
+                    const y = 10 + (1 - pct) * (chartHeight - 30);
+                    return (
+                      <line key={i} x1="10" y1={y} x2={chartWidth - 10} y2={y}
+                        stroke="#FCE7F3" strokeWidth="1" strokeDasharray="6 4" />
+                    );
+                  })}
+
+                  {/* Floor line */}
+                  <line x1="10" y1={chartHeight - 18} x2={chartWidth - 10} y2={chartHeight - 18}
+                    stroke="#FBCFE8" strokeWidth="1.5" />
 
                   {/* Bars */}
                   {chartData.map((d, idx) => {
-                    const paddingX = 30;
+                    const paddingX = 24;
                     const availableWidth = chartWidth - paddingX * 2;
-                    const barWidth = Math.min(26, availableWidth / chartData.length - 12);
+                    const barWidth = Math.min(32, availableWidth / chartData.length - 10);
                     const colWidth = availableWidth / chartData.length;
                     const x = paddingX + idx * colWidth + (colWidth - barWidth) / 2;
-                    const barHeight = (d.revenue / maxRevenue) * (chartHeight - 35);
-                    const y = chartHeight - barHeight - 15;
-                    
+                    const maxH = chartHeight - 32;
+                    const barHeight = d.revenue > 0 ? Math.max((d.revenue / maxRevenue) * maxH, 6) : 6;
+                    const y = chartHeight - barHeight - 18;
+
                     return (
-                      <g key={idx} className="group">
-                        {/* Bar track background */}
-                        <rect x={x} y={15} width={barWidth} height={chartHeight - 30} rx={4} fill="#FFF0F6" opacity="0.8" />
-                        {/* Bar rect */}
+                      <g key={idx}>
+                        {/* Bar */}
+                        <rect
+                          x={x} y={y}
+                          width={barWidth} height={barHeight}
+                          rx={6}
+                          fill={d.revenue > 0 ? 'url(#bar-grad)' : 'url(#bar-grad-zero)'}
+                          style={{ filter: d.revenue > 0 ? 'drop-shadow(0 4px 6px rgba(219,39,119,0.25))' : 'none' }}
+                        />
+                        {/* Revenue label above bar */}
                         {d.revenue > 0 && (
-                          <rect x={x} y={y} width={barWidth} height={Math.max(barHeight, 4)} rx={4} fill="url(#bar-grad)" />
+                          <>
+                            <rect
+                              x={x + barWidth / 2 - 20} y={y - 20}
+                              width={40} height={16}
+                              rx={6} fill="#BE185D"
+                            />
+                            <text
+                              x={x + barWidth / 2} y={y - 9}
+                              textAnchor="middle"
+                              fill="#ffffff"
+                              fontSize="8"
+                              fontWeight="800"
+                            >
+                              {d.revenue >= 1000 ? `₹${(d.revenue/1000).toFixed(1)}k` : `₹${d.revenue}`}
+                            </text>
+                          </>
                         )}
-                        {/* Revenue label on top of bar */}
-                        <text x={x + barWidth / 2} y={y - 6} textAnchor="middle" className="text-[9px] font-extrabold text-pink-600">
-                          {d.revenue > 0 ? `₹${d.revenue.toLocaleString('en-IN')}` : ''}
-                        </text>
                       </g>
                     );
                   })}
                 </svg>
                 {/* Bottom Labels */}
-                <div className="flex justify-between px-4 mt-2">
-                  {chartData.map((d, idx) => (
-                    <span key={idx} className="text-[10px] font-semibold text-slate-400">{d.label.split(' ')[0]}</span>
-                  ))}
+                <div className="flex mt-1" style={{ paddingLeft: '24px', paddingRight: '24px' }}>
+                  {chartData.map((d, idx) => {
+                    const colWidth = 100 / chartData.length;
+                    return (
+                      <div key={idx} className="text-center" style={{ width: `${colWidth}%` }}>
+                        <span className="text-[9px] font-bold text-slate-400">{d.label.split(' ')[0]}</span>
+                        <span className="block text-[8px] text-slate-300 font-medium">{d.label.split(' ')[1]}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="h-44 flex items-center justify-center text-xs text-slate-400">
+            <div className="h-48 flex items-center justify-center text-xs text-slate-400">
               Not enough daily data to populate analytics
             </div>
           )}
+
         </div>
 
         {/* Payment Breakdown Card */}

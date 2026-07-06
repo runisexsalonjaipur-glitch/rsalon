@@ -321,6 +321,17 @@ router.get('/entries', requireAdminOrSuperAdmin, async (req, res) => {
   }
 });
 
+// Delete entry — Super Admin only
+router.delete('/entries/:id', requireSuperAdmin, async (req, res) => {
+  try {
+    const entry = await Entry.findByIdAndDelete(req.params.id);
+    if (!entry) return res.status(404).json({ message: 'Entry not found' });
+    res.json({ message: 'Entry deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to delete entry', error: error.message });
+  }
+});
+
 // --- DASHBOARD STATISTICS (Optimized: 6 parallel aggregations) ---
 router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
   try {

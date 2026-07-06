@@ -248,17 +248,17 @@ const DashboardLayout = ({ children }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Navbar */}
-        <header className="h-20 glass-nav flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
+        <header className="h-16 glass-nav flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
+          {/* Left: Hamburger (mobile) */}
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-2xl hover:bg-slate-100 text-slate-600 transition-all duration-200"
+              className="lg:hidden p-2.5 rounded-2xl bg-accent/10 hover:bg-accent/20 text-accent-dark transition-all duration-200"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             </button>
-            
-            {/* Search Bar */}
-            <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center relative w-72 lg:w-96">
+            {/* Search Bar — desktop only */}
+            <form onSubmit={handleSearchSubmit} className="hidden lg:flex items-center relative w-72 xl:w-96">
               <Search className="w-4 h-4 text-slate-400 absolute left-4" />
               <input
                 type="text"
@@ -270,26 +270,36 @@ const DashboardLayout = ({ children }) => {
             </form>
           </div>
 
-          <div className="flex items-center gap-3 lg:gap-4">
+          {/* Center: Salon Name (mobile only) */}
+          <div className="lg:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
+            <div className="w-8 h-8 rounded-xl overflow-hidden border border-pink-100 shadow-sm">
+              <img src={settings.logo || logoImg} alt="Logo" className="w-full h-full object-cover scale-110" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-extrabold text-primary-dark leading-none">{settings.salonName}</p>
+              <span className="text-[10px] font-bold text-accent-dark">
+                {role === 'super_admin' ? 'Super Admin' : 'Admin'}
+              </span>
+            </div>
+          </div>
 
-
-
-
-            {/* Notification Badge */}
-            <button className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 relative transition-all duration-200">
-              <Bell className="w-4.5 h-4.5" />
+          {/* Right: Profile */}
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* Bell — desktop only */}
+            <button className="hidden lg:flex p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 relative transition-all duration-200">
+              <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-accent animate-pulse" />
             </button>
 
-            {/* Profile Avatar Trigger */}
-            <div className="flex items-center gap-3 pl-3 border-l border-slate-200/60">
+            {/* Profile Avatar */}
+            <div className="flex items-center gap-3 lg:pl-3 lg:border-l lg:border-slate-200/60">
               <div className="hidden text-right lg:block">
                 <p className="text-xs font-bold text-slate-800 leading-none capitalize">{username}</p>
                 <span className="text-[10px] font-bold text-accent-dark tracking-wide uppercase">
                   {role === 'super_admin' ? 'Super Admin' : 'Admin'}
                 </span>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center font-bold text-accent-dark">
+              <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center font-extrabold text-white text-sm shadow-sm">
                 {username ? username.substring(0, 2).toUpperCase() : 'AD'}
               </div>
             </div>
