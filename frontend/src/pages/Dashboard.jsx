@@ -23,27 +23,43 @@ const Sk = ({ w = 'w-20', h = 'h-6', rounded = 'rounded-lg' }) => (
 );
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [staff, setStaff] = useState([]);
-  const [servicesList, setServicesList] = useState([]);
+  // Load from cache instantly so page shows real data on first render
+  const cachedStats = (() => { try { return JSON.parse(localStorage.getItem('dash_stats') || 'null'); } catch { return null; } })();
+  const cachedStaff = (() => { try { return JSON.parse(localStorage.getItem('dash_staff') || '[]'); } catch { return []; } })();
+  const cachedServices = (() => { try { return JSON.parse(localStorage.getItem('dash_services') || '[]'); } catch { return []; } })();
+
+  const [stats, setStats] = useState(cachedStats);
+  const [loading, setLoading] = useState(!cachedStats); // no skeleton if cache exists
+  const [staff, setStaff] = useState(cachedStaff);
+  const [servicesList, setServicesList] = useState(cachedServices);
   const [days, setDays] = useState(7);
   const [selectedService, setSelectedService] = useState('All');
   const role = localStorage.getItem('role');
 
   const initDashboard = async () => {
     try {
-      setLoading(true);
+      // Only show skeleton if no cached data
+      if (!cachedStats) setLoading(true);
+
       const [statsRes, staffRes, serviceRes] = await Promise.all([
         apiCall('/dashboard/stats?days=7&serviceName=All'),
         apiCall('/staff'),
         apiCall('/services')
       ]);
+
+      const activeStaff = staffRes.filter(s => s.status === 'active').slice(0, 5);
+
       setStats(statsRes);
-      setStaff(staffRes.filter(s => s.status === 'active').slice(0, 5));
+      setStaff(activeStaff);
       setServicesList(serviceRes || []);
+
+      // Save to cache for next visit — instant load
+      localStorage.setItem('dash_stats', JSON.stringify(statsRes));
+      localStorage.setItem('dash_staff', JSON.stringify(activeStaff));
+      localStorage.setItem('dash_services', JSON.stringify(serviceRes || []));
+
     } catch (err) {
-      toast.error('Failed to load dashboard data');
+      if (!cachedStats) toast.error('Failed to load dashboard data');
       console.error(err);
     } finally {
       setLoading(false);
@@ -62,6 +78,8 @@ export default function Dashboard() {
   useEffect(() => {
     initDashboard();
   }, []);
+
+
 
   // Format currency helper
   const formatAmt = (val) => `₹${Number(val || 0).toLocaleString('en-IN')}`;
