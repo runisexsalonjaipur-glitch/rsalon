@@ -15,6 +15,9 @@ import apiCall from '../api';
 import { toast } from 'react-hot-toast';
 
 export default function StaffReport() {
+  const role = localStorage.getItem('role');
+  const isSuperAdmin = role === 'super_admin';
+
   const [staffList, setStaffList] = useState([]);
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -129,7 +132,7 @@ export default function StaffReport() {
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Stylist Operational Reports</h2>
           <p className="text-sm text-slate-500 font-medium font-outfit">Detailed analysis of client entries handled, service breakdowns, and commission metrics per stylist.</p>
         </div>
-        {reportData && (
+        {reportData && isSuperAdmin && (
           <button
             onClick={handleExportCSV}
             className="btn-primary flex items-center gap-1.5 shadow-sm text-xs py-2 px-4 self-start sm:self-auto"

@@ -409,14 +409,16 @@ export default function CustomerHistory() {
               </button>
 
               {/* Export Excel Button */}
-              <button
-                onClick={handleExportExcel}
-                disabled={entries.length === 0}
-                className="btn-secondary !py-3 !px-4 text-xs font-bold flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Export</span>
-              </button>
+              {role === 'super_admin' && (
+                <button
+                  onClick={handleExportExcel}
+                  disabled={entries.length === 0}
+                  className="btn-secondary !py-3 !px-4 text-xs font-bold flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+              )}
             </div>
 
             {/* Dropdown Filters Grid - Toggleable */}
@@ -784,13 +786,15 @@ export default function CustomerHistory() {
               <p className="text-xs text-slate-400">Clients who have visited 2 or more times sorted by return frequency</p>
             </div>
             
-            <button
-              onClick={handleExportRepeatExcel}
-              disabled={repeatCustomers.length === 0}
-              className="btn-accent !py-2.5 text-xs font-bold flex items-center gap-2 shrink-0 disabled:opacity-50"
-            >
-              <Download className="w-4 h-4" /> Export Repeat Customers
-            </button>
+            {role === 'super_admin' && (
+              <button
+                onClick={handleExportRepeatExcel}
+                disabled={repeatCustomers.length === 0}
+                className="btn-accent !py-2.5 text-xs font-bold flex items-center gap-2 shrink-0 disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" /> Export Repeat Customers
+              </button>
+            )}
           </div>
 
           {repeatLoading ? (

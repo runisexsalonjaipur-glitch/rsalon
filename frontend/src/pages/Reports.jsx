@@ -17,6 +17,9 @@ import apiCall from '../api';
 import { toast } from 'react-hot-toast';
 
 export default function Reports() {
+  const role = localStorage.getItem('role');
+  const isSuperAdmin = role === 'super_admin';
+
   // Load from cache for instant display
   const cachedReport = (() => { try { return JSON.parse(localStorage.getItem('dash_report') || 'null'); } catch { return null; } })();
 
@@ -168,12 +171,14 @@ export default function Reports() {
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Business Intelligence</h2>
           <p className="text-sm text-slate-500 font-medium">Verify salon cash flow breakdowns, stylist contributions, and treatment popularities.</p>
         </div>
-        <button
-          onClick={handleExport}
-          className="btn-primary shrink-0 shadow-sm text-xs flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          <Download className="w-4 h-4" /> Export Report
-        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={handleExport}
+            className="btn-primary shrink-0 shadow-sm text-xs flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <Download className="w-4 h-4" /> Export Report
+          </button>
+        )}
       </div>
 
       {/* Date Range Selection Bar */}
