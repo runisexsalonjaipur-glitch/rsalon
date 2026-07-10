@@ -18,9 +18,12 @@ export default function Services() {
   const role = localStorage.getItem('role');
   const isSuperAdmin = role === 'super_admin';
 
+  // Load from cache for instant display
+  const cachedServices = (() => { try { return JSON.parse(localStorage.getItem('services_list') || '[]'); } catch { return []; } })();
+
   // Data states
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState(cachedServices);
+  const [loading, setLoading] = useState(cachedServices.length === 0);
   
   // UI filter states
   const [search, setSearch] = useState('');
@@ -48,11 +51,16 @@ export default function Services() {
 
   const fetchServices = async () => {
     try {
-      setLoading(true);
+      if (cachedServices.length === 0) {
+        setLoading(true);
+      }
       const res = await apiCall('/services');
       setServices(res);
+      localStorage.setItem('services_list', JSON.stringify(res));
     } catch (err) {
-      toast.error('Failed to load services');
+      if (cachedServices.length === 0) {
+        toast.error('Failed to load services');
+      }
       console.error(err);
     } finally {
       setLoading(false);

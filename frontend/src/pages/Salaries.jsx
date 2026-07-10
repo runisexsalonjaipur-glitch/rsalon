@@ -22,15 +22,28 @@ import apiCall from '../api';
 import { toast } from 'react-hot-toast';
 
 export default function Salaries() {
-  const [staff, setStaff] = useState([]);
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cachedStaff = (() => { try { return JSON.parse(localStorage.getItem('salaries_staff') || '[]'); } catch { return []; } })();
+  const cachedReport = (() => { try { return JSON.parse(localStorage.getItem('salaries_report') || 'null'); } catch { return null; } })();
+  const cachedPayoutHistory = (() => { try { return JSON.parse(localStorage.getItem('salaries_payout_history') || '[]'); } catch { return []; } })();
+
+  const [staff, setStaff] = useState(cachedStaff);
+  const [report, setReport] = useState(cachedReport);
+  const [loading, setLoading] = useState(cachedStaff.length === 0 || !cachedReport);
   const [saving, setSaving] = useState(false);
-  const [salaryEdits, setSalaryEdits] = useState({}); // { staffId: { salary, commission } }
+  const [salaryEdits, setSalaryEdits] = useState(() => {
+    const initialEdits = {};
+    cachedStaff.forEach(s => {
+      initialEdits[s._id] = {
+        salary: s.salary || 0,
+        commission: s.commission || 0
+      };
+    });
+    return initialEdits;
+  }); // { staffId: { salary, commission } }
 
   // Payout tabs states
   const [activeTab, setActiveTab] = useState('payroll'); // 'payroll', 'history'
-  const [payoutHistory, setPayoutHistory] = useState([]);
+  const [payoutHistory, setPayoutHistory] = useState(cachedPayoutHistory);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyMonthFilter, setHistoryMonthFilter] = useState('');
 
@@ -69,16 +82,23 @@ export default function Salaries() {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      if (cachedStaff.length === 0 || !cachedReport) {
+        setLoading(true);
+      }
       const { start, end } = getMonthDateRange(payrollMonth);
       const [staffRes, reportRes, payoutsRes] = await Promise.all([
         apiCall('/staff'),
         apiCall(`/reports?filterType=custom&startDate=${start}&endDate=${end}`),
         apiCall('/salaries/payout')
       ]);
-      setStaff(staffRes.filter(s => s.status === 'active'));
+      const activeStaff = staffRes.filter(s => s.status === 'active');
+      setStaff(activeStaff);
       setReport(reportRes);
       setPayoutHistory(payoutsRes);
+
+      localStorage.setItem('salaries_staff', JSON.stringify(activeStaff));
+      localStorage.setItem('salaries_report', JSON.stringify(reportRes));
+      localStorage.setItem('salaries_payout_history', JSON.stringify(payoutsRes));
       
       // Initialize inline inputs
       const initialEdits = {};
@@ -90,7 +110,9 @@ export default function Salaries() {
       });
       setSalaryEdits(initialEdits);
     } catch (err) {
-      toast.error('Failed to load payroll configuration');
+      if (cachedStaff.length === 0 || !cachedReport) {
+        toast.error('Failed to load payroll configuration');
+      }
       console.error(err);
     } finally {
       setLoading(false);

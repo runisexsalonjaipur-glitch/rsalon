@@ -17,9 +17,12 @@ export default function Staff() {
   const role = localStorage.getItem('role');
   const isSuperAdmin = role === 'super_admin';
 
+  // Load from cache for instant display
+  const cachedStaff = (() => { try { return JSON.parse(localStorage.getItem('staff_list') || '[]'); } catch { return []; } })();
+
   // Data states
-  const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [staff, setStaff] = useState(cachedStaff);
+  const [loading, setLoading] = useState(cachedStaff.length === 0);
   const [search, setSearch] = useState('');
 
   // Modal states
@@ -37,11 +40,16 @@ export default function Staff() {
 
   const fetchStaff = async () => {
     try {
-      setLoading(true);
+      if (cachedStaff.length === 0) {
+        setLoading(true);
+      }
       const res = await apiCall('/staff');
       setStaff(res);
+      localStorage.setItem('staff_list', JSON.stringify(res));
     } catch (err) {
-      toast.error('Failed to load staff register');
+      if (cachedStaff.length === 0) {
+        toast.error('Failed to load staff register');
+      }
       console.error(err);
     } finally {
       setLoading(false);

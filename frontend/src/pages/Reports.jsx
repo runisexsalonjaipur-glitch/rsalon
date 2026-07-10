@@ -17,13 +17,13 @@ import apiCall from '../api';
 import { toast } from 'react-hot-toast';
 
 export default function Reports() {
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-
   // Load from cache for instant display
   const cachedReport = (() => { try { return JSON.parse(localStorage.getItem('dash_report') || 'null'); } catch { return null; } })();
+
+  const [report, setReport] = useState(cachedReport);
+  const [loading, setLoading] = useState(!cachedReport);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Default to past week
   useEffect(() => {
@@ -48,8 +48,6 @@ export default function Reports() {
       }
     };
     
-    // Show cached data immediately, then fetch fresh
-    if (cachedReport && !startDate && !endDate) setReport(cachedReport);
     fetchReport();
   }, [startDate, endDate]);
 

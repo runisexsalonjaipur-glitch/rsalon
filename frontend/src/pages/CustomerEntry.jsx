@@ -23,10 +23,14 @@ import apiCall from '../api';
 export default function CustomerEntry() {
   const navigate = useNavigate();
 
+  // Load from cache for instant display
+  const cachedStaff = (() => { try { return JSON.parse(localStorage.getItem('entry_staff') || '[]'); } catch { return []; } })();
+  const cachedServices = (() => { try { return JSON.parse(localStorage.getItem('entry_services') || '[]'); } catch { return []; } })();
+
   // Data states
-  const [staffList, setStaffList] = useState([]);
-  const [servicesList, setServicesList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [staffList, setStaffList] = useState(cachedStaff);
+  const [servicesList, setServicesList] = useState(cachedServices);
+  const [loading, setLoading] = useState(cachedStaff.length === 0 || cachedServices.length === 0);
 
   // Form states
   const [customerName, setCustomerName] = useState('');
@@ -61,17 +65,27 @@ export default function CustomerEntry() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
+        if (cachedStaff.length === 0 || cachedServices.length === 0) {
+          setLoading(true);
+        }
         const [staffRes, servicesRes] = await Promise.all([
           apiCall('/staff'),
           apiCall('/services')
         ]);
         
         // Filter only active staff and services
-        setStaffList(staffRes.filter(s => s.status === 'active'));
-        setServicesList(servicesRes.filter(s => s.status === 'active'));
+        const activeStaff = staffRes.filter(s => s.status === 'active');
+        const activeServices = servicesRes.filter(s => s.status === 'active');
+        
+        setStaffList(activeStaff);
+        setServicesList(activeServices);
+
+        localStorage.setItem('entry_staff', JSON.stringify(activeStaff));
+        localStorage.setItem('entry_services', JSON.stringify(activeServices));
       } catch (err) {
-        toast.error('Failed to load services or staff lists');
+        if (cachedStaff.length === 0 || cachedServices.length === 0) {
+          toast.error('Failed to load services or staff lists');
+        }
         console.error(err);
       } finally {
         setLoading(false);

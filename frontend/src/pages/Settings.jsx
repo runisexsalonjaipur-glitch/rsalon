@@ -13,25 +13,38 @@ import apiCall from '../api';
 import { toast } from 'react-hot-toast';
 
 export default function SettingsPage() {
-  const [salonName, setSalonName] = useState('');
-  const [logo, setLogo] = useState('');
-  const [currency, setCurrency] = useState('₹');
-  const [theme, setTheme] = useState('light');
-  const [loading, setLoading] = useState(true);
+  const cachedSettings = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('salon_settings') || 'null');
+    } catch {
+      return null;
+    }
+  })();
+
+  const [salonName, setSalonName] = useState(cachedSettings?.salonName || '');
+  const [logo, setLogo] = useState(cachedSettings?.logo || '');
+  const [currency, setCurrency] = useState(cachedSettings?.currency || '₹');
+  const [theme, setTheme] = useState(cachedSettings?.theme || 'light');
+  const [loading, setLoading] = useState(!cachedSettings);
   const [saving, setSaving] = useState(false);
 
   // Fetch active configurations
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        setLoading(true);
+        if (!cachedSettings) {
+          setLoading(true);
+        }
         const res = await apiCall('/settings');
         setSalonName(res.salonName);
         setLogo(res.logo || '');
         setCurrency(res.currency);
         setTheme(res.theme);
+        localStorage.setItem('salon_settings', JSON.stringify(res));
       } catch (err) {
-        toast.error('Failed to load salon settings');
+        if (!cachedSettings) {
+          toast.error('Failed to load salon settings');
+        }
         console.error(err);
       } finally {
         setLoading(false);

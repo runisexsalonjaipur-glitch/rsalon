@@ -20,8 +20,12 @@ export default function Attendance() {
   const isSuperAdmin = role === 'super_admin';
 
   const [activeTab, setActiveTab] = useState('daily'); // 'daily', 'monthly'
-  const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Load from cache for instant display
+  const cachedStaff = (() => { try { return JSON.parse(localStorage.getItem('attendance_staff') || '[]'); } catch { return []; } })();
+
+  const [staff, setStaff] = useState(cachedStaff);
+  const [loading, setLoading] = useState(cachedStaff.length === 0);
 
   // Daily tab states
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
@@ -35,11 +39,17 @@ export default function Attendance() {
 
   const fetchStaff = async () => {
     try {
-      setLoading(true);
+      if (cachedStaff.length === 0) {
+        setLoading(true);
+      }
       const res = await apiCall('/staff');
-      setStaff(res.filter(s => s.status === 'active'));
+      const activeStaff = res.filter(s => s.status === 'active');
+      setStaff(activeStaff);
+      localStorage.setItem('attendance_staff', JSON.stringify(activeStaff));
     } catch (err) {
-      toast.error('Failed to load staff roster');
+      if (cachedStaff.length === 0) {
+        toast.error('Failed to load staff roster');
+      }
       console.error(err);
     } finally {
       setLoading(false);
