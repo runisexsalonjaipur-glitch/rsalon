@@ -226,14 +226,17 @@ button[type="submit"],
   border: none !important;
 }
 
-.bg-primary:hover, 
-.btn-accent:hover,
-button[type="submit"]:hover,
-.btn-primary:hover {
-  background: linear-gradient(135deg, #F472B6 0%, #FFFFFF 100%) !important;
-  color: #DB2777 !important; /* text turns rose-pink for high-contrast visibility */
-  border: 1px solid #FBCFE8 !important;
-  box-shadow: 0 4px 15px rgba(219, 39, 119, 0.15) !important;
+/* Hover fade only on devices that really hover — avoids "stuck" white buttons after a tap on phones */
+@media (hover: hover) {
+  .bg-primary:hover, 
+  .btn-accent:hover,
+  button[type="submit"]:not(:disabled):hover,
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #F472B6 0%, #FFFFFF 100%) !important;
+    color: #DB2777 !important; /* text turns rose-pink for high-contrast visibility */
+    border: 1px solid #FBCFE8 !important;
+    box-shadow: 0 4px 15px rgba(219, 39, 119, 0.15) !important;
+  }
 }
 
 /* Accent bg and border selectors including opacity classes */
@@ -264,4 +267,125 @@ button[type="submit"]:hover,
 /* Custom utility for phone input padding to prevent overlap with +91 code */
 .phone-input-with-prefix {
   padding-left: 5rem !important;
+}
+
+/* ========================================================
+   MOBILE EXPERIENCE & FINAL POLISH
+   ======================================================== */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: rgba(244, 114, 182, 0.12);
+}
+
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid #F472B6;
+  outline-offset: 2px;
+}
+
+/* Login inputs: comfortable size, 16px on phones so iOS doesn't zoom */
+.login-input {
+  font-size: 14px;
+  padding-top: 0.85rem !important;
+  padding-bottom: 0.85rem !important;
+}
+
+/* Bottom tab bar (mobile only) */
+.bottom-tabbar {
+  background: rgba(255, 253, 253, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid #FBCFE8;
+  box-shadow: 0 -8px 24px -12px rgba(219, 39, 119, 0.18);
+}
+.bottom-tabbar .tab-idle { color: #64748B; }
+.bottom-tabbar .tab-active { color: #DB2777; }
+.bottom-tabbar .tab-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+.bottom-tabbar .tab-pill.is-active { background: #FCE7F3; }
+.bottom-tabbar .tab-fab {
+  background: linear-gradient(135deg, #DB2777 0%, #F472B6 100%);
+  box-shadow: 0 8px 20px -6px rgba(219, 39, 119, 0.55);
+  transition: transform 0.15s ease;
+}
+.bottom-tabbar a:active .tab-fab { transform: scale(0.94); }
+
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Modal entrance animations (used by page modals) */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleUp { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes sheetUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.animate-fadeIn { animation: fadeIn 0.18s ease-out; }
+.animate-scaleUp { animation: scaleUp 0.2s ease-out; }
+
+/* Page modals never exceed the screen — content scrolls inside */
+.fixed.inset-0.z-50.flex > div {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+
+@media (max-width: 1023px) {
+  /* Leave room for the bottom tab bar */
+  main.app-main {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Prevent iOS auto-zoom when focusing any field */
+  input, select, textarea, .login-input {
+    font-size: 16px !important;
+  }
+
+  main.app-main {
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
+  }
+
+  /* Cards breathe a little less on small screens */
+  main .bg-white.p-6, main .bg-white.p-8 { padding: 1.1rem !important; }
+
+  /* Modals become bottom sheets on phones */
+  .fixed.inset-0.z-50.flex {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .fixed.inset-0.z-50.flex > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 92dvh;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-left-radius: 28px !important;
+    border-top-right-radius: 28px !important;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)) !important;
+    animation: sheetUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Wide tables scroll sideways smoothly instead of squashing */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .overflow-x-auto > table { min-width: 560px; }
+  .overflow-x-auto > table th,
+  .overflow-x-auto > table td { white-space: nowrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

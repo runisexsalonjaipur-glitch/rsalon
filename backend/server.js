@@ -8,12 +8,16 @@ const { Service, Staff, Customer, Settings, setUseMock } = require('./models');
 
 const app = express();
 
-// Middleware — allow Vercel frontend + local dev
+// Middleware — allow production domain, Vercel frontend + local dev
 const allowedOrigins = [
+  'https://rsalonjaipur.in',
+  'https://www.rsalonjaipur.in',
   'https://rsalon-nine.vercel.app',
   'http://localhost:5173',
   'http://localhost:4173',
   'http://127.0.0.1:5173',
+  // Extra origins can be added from Railway without a code change: ALLOWED_ORIGINS=https://a.com,https://b.com
+  ...(process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean),
 ];
 
 app.use(cors({
@@ -21,9 +25,10 @@ app.use(cors({
     // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Also allow any vercel.app preview deployments
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
-    return callback(new Error('CORS not allowed: ' + origin));
+    // Also allow any vercel.app preview deployments and rsalonjaipur.in subdomains
+    if (origin.endsWith('.vercel.app') || origin.endsWith('.rsalonjaipur.in')) return callback(null, true);
+    // Reject without throwing so the browser gets a clean CORS failure instead of a 500
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

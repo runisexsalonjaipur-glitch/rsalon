@@ -19,7 +19,8 @@ import {
   Coins,
   Sun,
   Moon,
-  Clock
+  Clock,
+  Grid2x2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -79,6 +80,11 @@ const DashboardLayout = ({ children }) => {
     fetchSettings();
   }, [location.pathname]); // reload if we edit settings
 
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const handleLogout = () => {
     localStorage.clear();
     toast.success('Logged out successfully');
@@ -98,13 +104,25 @@ const DashboardLayout = ({ children }) => {
     { name: 'Salaries', path: '/salaries', icon: Coins, roles: ['super_admin'] },
   ];
 
+  // Primary destinations shown in the mobile bottom tab bar; the rest live in the "More" drawer
+  const bottomNavItems = [
+    { name: 'Home', path: '/', icon: LayoutDashboard },
+    { name: 'History', path: '/customer-history', icon: History },
+    { name: 'New Entry', path: '/customer-entry', icon: UserPlus, primary: true },
+    { name: 'Staff', path: '/staff-report', icon: ScissorsLineDashed },
+  ];
+  const morePaths = navItems
+    .filter((i) => !bottomNavItems.some((b) => b.path === i.path))
+    .map((i) => i.path);
+  const isOnMorePage = morePaths.includes(location.pathname);
+
   const handleSearchSubmit = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     navigate(`/customer-history?search=${encodeURIComponent(searchQuery.trim())}`);
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-bg flex text-primary">
+    <div className="h-[100dvh] overflow-hidden bg-bg flex text-primary">
       {/* Sidebar for Desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100 shadow-soft shrink-0 h-full">
         {/* Salon Logo Header */}
@@ -185,7 +203,7 @@ const DashboardLayout = ({ children }) => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl flex flex-col lg:hidden"
+              className="fixed inset-y-0 left-0 w-[82vw] max-w-xs bg-white z-50 shadow-2xl flex flex-col lg:hidden mobile-drawer"
             >
               <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100">
                 <div className="flex items-center gap-3">
@@ -199,13 +217,14 @@ const DashboardLayout = ({ children }) => {
                 </div>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-1 rounded-full hover:bg-slate-100"
+                  aria-label="Close menu"
+                  className="p-2 -mr-2 rounded-full hover:bg-slate-100"
                 >
                   <X className="w-6 h-6 text-slate-500" />
                 </button>
               </div>
 
-              <nav className="flex-1 py-6 space-y-1.5 px-4 overflow-y-auto">
+              <nav className="flex-1 py-4 space-y-1 px-4 overflow-y-auto">
                 {navItems.map((item) => {
                   if (item.roles && !item.roles.includes(role)) return null;
                   const Icon = item.icon;
@@ -216,7 +235,7 @@ const DashboardLayout = ({ children }) => {
                       key={item.name}
                       to={item.path}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ${
+                      className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 ${
                         isActive 
                           ? 'active-nav-link shadow-sm' 
                           : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary-dark dark:hover:text-white'
@@ -229,7 +248,7 @@ const DashboardLayout = ({ children }) => {
                 })}
               </nav>
 
-              <div className="p-6 border-t border-slate-100 flex flex-col gap-3">
+              <div className="p-5 border-t border-slate-100 flex flex-col gap-3 safe-bottom">
                 <div className="flex items-center gap-3">
                   <UserCircle2 className="w-10 h-10 text-slate-400 dark:text-slate-500" />
                   <div>
@@ -258,6 +277,7 @@ const DashboardLayout = ({ children }) => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
               className="lg:hidden p-2.5 rounded-2xl bg-accent/10 hover:bg-accent/20 text-accent-dark transition-all duration-200"
             >
               <Menu className="w-5 h-5" />
@@ -280,7 +300,7 @@ const DashboardLayout = ({ children }) => {
             <div className="w-8 h-8 rounded-xl overflow-hidden border border-pink-100 shadow-sm">
               <img src={settings.logo || logoImg} alt="Logo" className="w-full h-full object-cover scale-110" />
             </div>
-            <p className="text-sm font-extrabold text-primary-dark leading-none">{settings.salonName}</p>
+            <p className="text-sm font-extrabold text-primary-dark leading-none truncate max-w-[45vw]">{settings.salonName}</p>
           </div>
 
           {/* Right: Profile */}
@@ -307,19 +327,63 @@ const DashboardLayout = ({ children }) => {
         </header>
 
         {/* Page Inner Container */}
-        <main className="flex-1 p-4 lg:p-6 overflow-y-auto w-full mx-auto max-w-none">
+        <main className="app-main flex-1 p-4 lg:p-6 overflow-y-auto overflow-x-hidden w-full mx-auto max-w-none">
           {children}
         </main>
+
+        {/* Mobile Bottom Tab Bar */}
+        <nav className="bottom-tabbar lg:hidden fixed bottom-0 inset-x-0 z-30 safe-bottom" aria-label="Primary">
+          <div className="grid grid-cols-5 items-end h-16 px-1">
+            {bottomNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              if (item.primary) {
+                return (
+                  <Link key={item.path} to={item.path} className="flex flex-col items-center justify-end pb-1.5 gap-1" aria-label={item.name}>
+                    <span className={`tab-fab w-12 h-12 -mt-6 rounded-2xl flex items-center justify-center text-white ${isActive ? 'ring-4 ring-pink-100' : ''}`}>
+                      <Icon className="w-5 h-5" />
+                    </span>
+                    <span className={`text-[10px] font-bold leading-none ${isActive ? 'tab-active' : 'tab-idle'}`}>{item.name}</span>
+                  </Link>
+                );
+              }
+              return (
+                <Link key={item.path} to={item.path} className="flex flex-col items-center justify-center h-full gap-1">
+                  <span className={`tab-pill ${isActive ? 'is-active' : ''}`}>
+                    <Icon className={`w-5 h-5 ${isActive ? 'tab-active' : 'tab-idle'}`} />
+                  </span>
+                  <span className={`text-[10px] font-bold leading-none ${isActive ? 'tab-active' : 'tab-idle'}`}>{item.name}</span>
+                </Link>
+              );
+            })}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex flex-col items-center justify-center h-full gap-1"
+            >
+              <span className={`tab-pill ${isOnMorePage ? 'is-active' : ''}`}>
+                <Grid2x2 className={`w-5 h-5 ${isOnMorePage ? 'tab-active' : 'tab-idle'}`} />
+              </span>
+              <span className={`text-[10px] font-bold leading-none ${isOnMorePage ? 'tab-active' : 'tab-idle'}`}>More</span>
+            </button>
+          </div>
+        </nav>
       </div>
     </div>
   );
 };
 
 export default function App() {
-  console.log('App: rendering root router, Token exists:', !!localStorage.getItem('token'));
   return (
     <Router>
-      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+      <Toaster
+        position="top-center"
+        containerStyle={{ top: 'max(12px, env(safe-area-inset-top))' }}
+        toastOptions={{
+          duration: 3500,
+          style: { borderRadius: '14px', fontSize: '13px', fontWeight: 600, color: '#1E293B', boxShadow: '0 10px 30px -8px rgba(219, 39, 119, 0.25)' },
+          success: { iconTheme: { primary: '#DB2777', secondary: '#fff' } },
+        }}
+      />
       <Routes>
         <Route path="/login" element={<Login />} />
         

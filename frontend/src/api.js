@@ -36,7 +36,13 @@ const apiCall = async (endpoint, options = {}) => {
   }
 
   try {
-    const response = await fetch(url, config);
+    let response;
+    try {
+      response = await fetch(url, config);
+    } catch {
+      // Network / CORS / server asleep — fetch itself rejected
+      throw new Error('Unable to reach the server. Please check your internet and try again.');
+    }
     
     // Auto logout on 401 or 403 (unauthorized/invalid token)
     if (response.status === 401 || response.status === 403) {
@@ -46,9 +52,9 @@ const apiCall = async (endpoint, options = {}) => {
       }
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.error || data.message || 'Something went wrong');
+      throw new Error(data.error || data.message || `Something went wrong (${response.status})`);
     }
     return data;
   } catch (error) {

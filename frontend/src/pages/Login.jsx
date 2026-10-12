@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
-import { Lock, User, ScissorsLineDashed, Loader2 } from 'lucide-react';
+import { Lock, User, Loader2, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import apiCall, { pingServer } from '../api';
 import logoImg from '../assets/logo.png';
@@ -10,6 +10,7 @@ import logoImg from '../assets/logo.png';
 export default function Login() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Wake up Railway backend silently in background
   useEffect(() => {
@@ -46,21 +47,21 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-6 relative">
+    <div className="min-h-[100dvh] bg-bg flex items-center justify-center px-4 py-8 sm:p-6 relative">
       {/* Super clean layout, no glows or visual noise */}
       <motion.div 
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="w-full max-w-md bg-white border border-slate-100 p-8 sm:p-10 rounded-[32px] shadow-premium"
+        className="w-full max-w-md bg-white border border-slate-100 px-6 py-8 sm:p-10 rounded-[32px] shadow-premium"
       >
         {/* Salon Logo Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 rounded-3xl bg-white logo-container border border-slate-100 flex items-center justify-center shadow-soft overflow-hidden p-0 mb-4 shrink-0">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-white logo-container border border-slate-100 flex items-center justify-center shadow-soft overflow-hidden p-0 mb-4 shrink-0">
             <img src={logoImg} alt="Logo" className="w-full h-full object-cover scale-110" />
           </div>
           <h2 className="text-2xl font-extrabold text-primary-dark tracking-tight">R Unisex Salon</h2>
-          <p className="text-xs text-slate-450 mt-1 font-semibold">Sign in to manage your salon operations</p>
+          <p className="text-sm text-slate-500 mt-1 font-medium text-center">Sign in to manage your salon operations</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -79,7 +80,7 @@ export default function Login() {
                 autoComplete="username"
                 spellCheck={false}
                 {...register('username', { required: 'Username is required' })}
-                className="form-input !pl-11 text-xs"
+                className="form-input login-input !pl-11"
               />
             </div>
             {errors.username && (
@@ -89,30 +90,29 @@ export default function Login() {
 
           {/* Password Field */}
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
-              <button 
-                type="button" 
-                disabled 
-                className="text-[10px] font-bold text-slate-400 cursor-not-allowed hover:text-slate-500 transition-colors"
-              >
-                Forgot Password?
-              </button>
-            </div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Password</label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Lock className="h-4.5 w-4.5 text-slate-400" />
               </span>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="Enter password"
                 autoCapitalize="none"
                 autoCorrect="off"
                 autoComplete="current-password"
                 spellCheck={false}
                 {...register('password', { required: 'Password is required' })}
-                className="form-input !pl-11 text-xs"
+                className="form-input login-input !pl-11 !pr-12"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-slate-400 hover:text-pink-600 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+              </button>
             </div>
             {errors.password && (
               <span className="text-xs text-red-500 font-semibold mt-1.5 block">{errors.password.message}</span>
@@ -123,7 +123,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-primary hover:bg-primary-light text-white font-bold rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md active:scale-97 disabled:opacity-50 disabled:cursor-not-allowed mt-2 text-xs"
+            className="w-full py-3.5 bg-primary hover:bg-primary-light text-white font-bold rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md active:scale-97 disabled:opacity-50 disabled:cursor-not-allowed mt-2 text-sm"
           >
             {loading ? (
               <>
@@ -136,7 +136,9 @@ export default function Login() {
           </button>
         </form>
 
-
+        <p className="text-[11px] text-slate-500 text-center mt-6">
+          Forgot your password? Ask the salon owner to reset it.
+        </p>
       </motion.div>
     </div>
   );
