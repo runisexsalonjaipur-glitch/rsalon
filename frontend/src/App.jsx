@@ -20,13 +20,16 @@ import {
   Sun,
   Moon,
   Clock,
-  Grid2x2
+  Grid2x2,
+  DatabaseBackup,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import Login from './pages/Login';
 import apiCall, { clearApiCache } from './api';
 import logoImg from './assets/logo.png';
+import { downloadExcelBackup, isBackupDue, snoozeBackupReminder, daysSince } from './backup';
 
 // Each page is downloaded only when first opened — much faster first load on mobile
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -82,6 +85,8 @@ const DashboardLayout = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settings, setSettings] = useState(readCachedSettings);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showBackupPrompt, setShowBackupPrompt] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
 
 
   // Fetch settings for Title/Logo
@@ -91,17 +96,41 @@ const DashboardLayout = ({ children }) => {
         const res = await apiCall('/settings');
         setSettings(res);
         try { localStorage.setItem('salon_settings', JSON.stringify(res)); } catch { /* storage full — ignore */ }
+        // Weekly backup reminder — owner only, decided from fresh server data
+        if (role === 'super_admin' && isBackupDue(res.lastBackupAt)) setShowBackupPrompt(true);
       } catch (err) {
         console.error(err);
       }
     };
     fetchSettings();
-  }, [location.pathname]); // reload if we edit settings
+    // Settings page broadcasts this after saving, so the logo/name refresh without refetching on every page
+    window.addEventListener('settings-updated', fetchSettings);
+    return () => window.removeEventListener('settings-updated', fetchSettings);
+  }, []);
 
   // Close the mobile drawer whenever the route changes
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const handleBackupNow = async () => {
+    setBackingUp(true);
+    try {
+      const lastBackupAt = await downloadExcelBackup();
+      setSettings((prev) => ({ ...prev, lastBackupAt }));
+      setShowBackupPrompt(false);
+      toast.success('Backup downloaded! Keep the Excel file safe.');
+    } catch (err) {
+      toast.error(err.message || 'Backup failed. Please try again.');
+    } finally {
+      setBackingUp(false);
+    }
+  };
+
+  const handleBackupLater = () => {
+    snoozeBackupReminder();
+    setShowBackupPrompt(false);
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -351,6 +380,46 @@ const DashboardLayout = ({ children }) => {
             <div key={location.pathname} className="page-enter">{children}</div>
           </Suspense>
         </main>
+
+        {/* Weekly backup reminder */}
+        {showBackupPrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn" role="dialog" aria-modal="true" aria-labelledby="backup-title">
+            <div className="bg-white w-full max-w-sm p-6 space-y-5 animate-scaleUp">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl backup-icon flex items-center justify-center shrink-0">
+                  <DatabaseBackup className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 id="backup-title" className="text-base font-extrabold text-slate-900">Weekly data backup</h3>
+                  <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                    {settings.lastBackupAt
+                      ? `Last backup was ${daysSince(settings.lastBackupAt)} days ago.`
+                      : 'You have not downloaded a backup yet.'}{' '}
+                    Download all salon data as an Excel file and keep it safe.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleBackupNow}
+                  disabled={backingUp}
+                  className="btn-primary w-full !py-3 text-sm font-bold disabled:opacity-60"
+                >
+                  {backingUp ? <><Loader2 className="w-4 h-4 animate-spin" /> Preparing file…</> : 'Download Excel Backup'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBackupLater}
+                  disabled={backingUp}
+                  className="w-full py-3 text-sm font-bold text-slate-500 rounded-2xl"
+                >
+                  Remind me tomorrow
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Bottom Tab Bar */}
         <nav className="bottom-tabbar lg:hidden fixed bottom-0 inset-x-0 z-30 safe-bottom" aria-label="Primary">

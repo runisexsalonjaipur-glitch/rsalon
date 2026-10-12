@@ -8,6 +8,7 @@ const routes = require('./routes');
 const { Service, Staff, Customer, Settings, setUseMock } = require('./models');
 
 const app = express();
+app.disable('x-powered-by');
 
 // Middleware — allow production domain, Vercel frontend + local dev
 const allowedOrigins = [
@@ -113,7 +114,8 @@ const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/rsalon';
 
 mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000
+  serverSelectionTimeoutMS: 5000,
+  maxPoolSize: 10 // a single salon never needs the default 100 connections — saves memory
 })
   .then(async () => {
     console.log('MongoDB connection established successfully.');

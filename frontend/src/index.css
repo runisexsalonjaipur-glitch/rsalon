@@ -431,3 +431,43 @@ main table tbody tr { border-color: #F7EDF2 !important; }
     min-height: 42px;
   }
 }
+
+/* Customer Entry — service tiles */
+.cat-chip-active {
+  background: #DB2777 !important;
+  border-color: #DB2777 !important;
+  color: #FFFFFF !important;
+}
+.service-tile { background: #FFFFFF; }
+.service-tile.is-selected {
+  background: #FDF2F7;
+  border-color: #F9A8D4;
+}
+.service-tile .service-price { color: #DB2777; }
+.qty-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  color: #DB2777;
+  background: #FCE7F3;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.qty-btn:active { transform: scale(0.92); }
+@media (hover: hover) { .qty-btn:hover { background: #FBCFE8; } }
+
+.backup-icon { background: #FCE7F3; color: #DB2777; }
+
+/* Customer Entry checkout bar sits just above the bottom tab bar on mobile */
+.checkout-bar {
+  bottom: calc(4rem + env(safe-area-inset-bottom));
+  border-radius: 0 !important;
+  border: none !important;
+  border-top: 1px solid #F5E6EE !important;
+  box-shadow: 0 -6px 18px -10px rgba(190, 24, 93, 0.25) !important;
+}

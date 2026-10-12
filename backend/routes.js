@@ -22,11 +22,33 @@ const getDateRange = (filterType, startCustom, endCustom) => {
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
       break;
+    case 'yesterday':
+      start.setDate(start.getDate() - 1);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(end.getDate() - 1);
+      end.setHours(23, 59, 59, 999);
+      break;
+    case '7days':
+      start.setDate(start.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      break;
+    case '30days':
+      start.setDate(start.getDate() - 29);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      break;
     case 'month':
       start.setDate(1);
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
       break;
+    case 'last_month':
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      break;
+    case 'all':
+      return null; // no date restriction
     case 'custom':
       if (startCustom) { start = new Date(startCustom); start.setHours(0, 0, 0, 0); }
       else { start.setHours(0, 0, 0, 0); }
@@ -369,7 +391,7 @@ router.get('/entries', requireAdminOrSuperAdmin, async (req, res) => {
       query.dueStatus = dueStatus;
     } else {
       const range = getDateRange(filter, startDate, endDate);
-      query.createdAt = { $gte: range.start, $lte: range.end };
+      if (range) query.createdAt = { $gte: range.start, $lte: range.end };
     }
 
     if (staffId && staffId !== 'All') { query.staff = staffId; }
@@ -542,10 +564,21 @@ router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
     const svcMatch = serviceName !== 'All' ? { 'services.name': serviceName } : {};
 
     // ALL queries run in PARALLEL — no sequential waiting
-    const [periodEntries, recentEntries, monthlyAgg, chartAgg, topStaffAgg, topServicesAgg, pendingDuesAgg] = await Promise.all([
+    const [periodAgg, recentEntries, monthlyAgg, chartAgg, topStaffAgg, topServicesAgg, pendingDuesAgg] = await Promise.all([
 
-      // 1. Period entries (lean = fast, no Mongoose overhead)
-      Entry.find({ createdAt: { $gte: startDate, $lte: endDate }, ...svcMatch }).lean(),
+      // 1. Period totals computed in the database (no need to ship every entry to the server)
+      Entry.aggregate([
+        { $match: { createdAt: { $gte: startDate, $lte: endDate }, ...svcMatch } },
+        { $group: {
+          _id: null,
+          revenue: { $sum: '$finalAmount' },
+          customers: { $sum: 1 },
+          servicesCount: { $sum: { $size: { $ifNull: ['$services', []] } } },
+          cash: { $sum: { $ifNull: ['$paymentBreakdown.cash', 0] } },
+          upi: { $sum: { $ifNull: ['$paymentBreakdown.upi', 0] } },
+          card: { $sum: { $ifNull: ['$paymentBreakdown.card', 0] } }
+        }}
+      ]),
 
       // 2. Recent 5 entries with partial populate (unfiltered, live feed)
       Entry.find().populate('customer', 'name phone').populate('staff', 'name role').sort({ createdAt: -1 }).limit(5).lean(),
@@ -596,15 +629,13 @@ router.get('/dashboard/stats', requireAdminOrSuperAdmin, async (req, res) => {
     ]);
 
     // Process period stats
-    let periodRevenue = 0, periodCash = 0, periodUpi = 0, periodCard = 0, periodServicesCount = 0;
-    periodEntries.forEach(e => {
-      periodRevenue += e.finalAmount;
-      periodServicesCount += e.services.length;
-      periodCash += e.paymentBreakdown?.cash || 0;
-      periodUpi += e.paymentBreakdown?.upi || 0;
-      periodCard += e.paymentBreakdown?.card || 0;
-    });
-    const periodCustomers = periodEntries.length;
+    const period = periodAgg[0] || {};
+    const periodRevenue = period.revenue || 0;
+    const periodCash = period.cash || 0;
+    const periodUpi = period.upi || 0;
+    const periodCard = period.card || 0;
+    const periodServicesCount = period.servicesCount || 0;
+    const periodCustomers = period.customers || 0;
     const averageBill = periodCustomers > 0 ? Math.round(periodRevenue / periodCustomers) : 0;
 
     // Build chart — fill missing days with 0
@@ -648,9 +679,9 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
     const { startDate, endDate } = req.query;
     const range = getDateRange('custom', startDate, endDate);
 
-    const entries = await Entry.find({ createdAt: { $gte: range.start, $lte: range.end } }).populate('customer').populate('staff');
+    const entries = await Entry.find({ createdAt: { $gte: range.start, $lte: range.end } }).populate('staff', 'name').lean();
 
-    const servicesCatalog = await Service.find({});
+    const servicesCatalog = await Service.find({}).lean();
     const serviceCatalogMap = {};
     servicesCatalog.forEach(s => {
       serviceCatalogMap[s.name] = s;
@@ -664,7 +695,7 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
 
     entries.forEach(entry => {
       revenue += entry.finalAmount;
-      discountTotal += entry.discount;
+      discountTotal += entry.discount || 0;
       dueTotal += entry.dueAmount || 0;
       
       let entryProductCost = 0;
@@ -693,22 +724,22 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
       });
 
       productCostTotal += entryProductCost;
-      cash += entry.paymentBreakdown.cash || 0;
-      upi += entry.paymentBreakdown.upi || 0;
-      card += entry.paymentBreakdown.card || 0;
+      cash += entry.paymentBreakdown?.cash || 0;
+      upi += entry.paymentBreakdown?.upi || 0;
+      card += entry.paymentBreakdown?.card || 0;
 
       const staffId = entry.staff ? entry.staff._id.toString() : 'Unknown';
       const staffName = entry.staff ? entry.staff.name : 'Unknown';
       if (!staffStats[staffId]) { 
-        staffStats[staffId] = { name: staffName, revenue: 0, totalBilled: 0, count: 0 }; 
+        staffStats[staffId] = { staffId, name: staffName, revenue: 0, totalBilled: 0, count: 0 }; 
       }
       
-      const commissionBase = Math.max(0, entryServiceRevenue - entry.discount);
+      const commissionBase = Math.max(0, entryServiceRevenue - (entry.discount || 0));
       staffStats[staffId].revenue += commissionBase;
       staffStats[staffId].totalBilled += entry.finalAmount;
       staffStats[staffId].count += 1;
 
-      entry.services.forEach(svc => {
+      (entry.services || []).forEach(svc => {
         if (!serviceStats[svc.name]) { serviceStats[svc.name] = { name: svc.name, count: 0, revenue: 0 }; }
         serviceStats[svc.name].count += 1;
         serviceStats[svc.name].revenue += svc.price;
@@ -727,7 +758,7 @@ router.get('/reports', requireSuperAdmin, async (req, res) => {
     const endStr = range.end.toISOString().slice(0, 10);
     const attendanceRecords = await Attendance.find({
       date: { $gte: startStr, $lte: endStr }
-    });
+    }).lean();
 
     const attendanceSummary = {};
     attendanceRecords.forEach(rec => {
@@ -814,9 +845,9 @@ router.get('/reports/staff/:staffId', requireAdminOrSuperAdmin, async (req, res)
     const entries = await Entry.find({
       staff: staffId,
       createdAt: { $gte: range.start, $lte: range.end }
-    }).populate('customer');
+    }).populate('customer', 'name phone').lean();
 
-    const servicesCatalog = await Service.find({});
+    const servicesCatalog = await Service.find({}).lean();
     const serviceCatalogMap = {};
     servicesCatalog.forEach(s => {
       serviceCatalogMap[s.name] = s;
@@ -870,7 +901,7 @@ router.get('/reports/staff/:staffId', requireAdminOrSuperAdmin, async (req, res)
       totalProductCost += entryProductCost;
       totalServiceRevenue += entryServiceRevenue;
 
-      const commissionBase = Math.max(0, entryServiceRevenue - entry.discount);
+      const commissionBase = Math.max(0, entryServiceRevenue - (entry.discount || 0));
       const commEarned = Math.round((commissionBase * (staff.commission || 0)) / 100);
       totalCommissionEarned += commEarned;
 
@@ -880,7 +911,7 @@ router.get('/reports/staff/:staffId', requireAdminOrSuperAdmin, async (req, res)
         customerName: entry.customer?.name || 'Walk-in',
         customerPhone: entry.customer?.phone || 'N/A',
         services: servicesMapped,
-        discount: entry.discount,
+        discount: entry.discount || 0,
         finalAmount: entry.finalAmount,
         productCost: entryProductCost,
         serviceRevenue: entryServiceRevenue,
@@ -959,7 +990,7 @@ router.post('/salaries/payout', requireSuperAdmin, async (req, res) => {
 
 router.get('/salaries/payout', requireSuperAdmin, async (req, res) => {
   try {
-    const payouts = await SalaryPayout.find({}).populate('staff');
+    const payouts = await SalaryPayout.find({}).populate('staff', 'name role phone');
     // Sort by paidAt descending
     payouts.sort((a, b) => new Date(b.paidAt) - new Date(a.paidAt));
     res.json(payouts);
@@ -975,6 +1006,37 @@ router.delete('/salaries/payout/:id', requireSuperAdmin, async (req, res) => {
     res.json({ message: 'Payout record reversed/deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete payout record', error: error.message });
+  }
+});
+
+// --- DATA BACKUP (Super Admin) ---
+// Returns every collection in one response; the browser turns it into an Excel workbook.
+router.get('/backup/export', requireSuperAdmin, async (req, res) => {
+  try {
+    const [entries, customers, staff, services, attendance, payouts] = await Promise.all([
+      Entry.find({}).populate('customer', 'name phone').populate('staff', 'name role').sort({ createdAt: -1 }).lean(),
+      Customer.find({}).lean(),
+      Staff.find({}).lean(),
+      Service.find({}).lean(),
+      Attendance.find({}).lean(),
+      SalaryPayout.find({}).lean()
+    ]);
+    res.json({ generatedAt: new Date(), entries, customers, staff, services, attendance, payouts });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to export backup', error: error.message });
+  }
+});
+
+// Called after the Excel file is saved, so the 7-day reminder resets on every device
+router.post('/backup/complete', requireSuperAdmin, async (req, res) => {
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) settings = new Settings({});
+    settings.lastBackupAt = new Date();
+    await settings.save();
+    res.json({ lastBackupAt: settings.lastBackupAt });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to record backup', error: error.message });
   }
 });
 

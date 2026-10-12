@@ -3,13 +3,13 @@ import {
   Settings, 
   Save, 
   Database, 
-  RefreshCw, 
   Palette, 
-  HelpCircle, 
+
   Image as ImageIcon,
   IndianRupee
 } from 'lucide-react';
 import apiCall from '../api';
+import { downloadExcelBackup, daysSince } from '../backup';
 import { toast } from 'react-hot-toast';
 
 export default function SettingsPage() {
@@ -27,6 +27,8 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState(cachedSettings?.theme || 'light');
   const [loading, setLoading] = useState(!cachedSettings);
   const [saving, setSaving] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
+  const [lastBackupAt, setLastBackupAt] = useState(cachedSettings?.lastBackupAt || null);
 
   // Fetch active configurations
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function SettingsPage() {
         setCurrency(res.currency);
         setTheme(res.theme);
         localStorage.setItem('salon_settings', JSON.stringify(res));
+        setLastBackupAt(res.lastBackupAt || null);
       } catch (err) {
         if (!cachedSettings) {
           toast.error('Failed to load salon settings');
@@ -66,6 +69,7 @@ export default function SettingsPage() {
         method: 'PUT',
         body: { salonName, logo, currency, theme }
       });
+      window.dispatchEvent(new Event('settings-updated'));
       toast.success('Salon configurations saved successfully!');
     } catch (err) {
       toast.error(err.message || 'Failed to save settings');
@@ -74,26 +78,17 @@ export default function SettingsPage() {
     }
   };
 
-  // Mock Database Backup
-  const handleBackup = () => {
-    const backupToast = toast.loading('Exporting database structures and active collections...');
-    setTimeout(() => {
-      toast.dismiss(backupToast);
-      toast.success('Database backup created successfully! Saved: rsalon_backup_2026.json');
-    }, 1500);
-  };
-
-  // Mock Database Restore
-  const handleRestore = () => {
-    const confirm = window.confirm('WARNING: Restoring the database will overwrite all existing entries, services, and staff. Are you sure you want to proceed?');
-    if (!confirm) return;
-
-    const restoreToast = toast.loading('Restoring data structures from backup register...');
-    setTimeout(() => {
-      toast.dismiss(restoreToast);
-      toast.success('Database collections restored successfully! Relaunching boards...');
-      window.location.reload();
-    }, 2000);
+  const handleBackup = async () => {
+    setBackingUp(true);
+    try {
+      const at = await downloadExcelBackup();
+      setLastBackupAt(at);
+      toast.success('Backup downloaded! Keep the Excel file safe.');
+    } catch (err) {
+      toast.error(err.message || 'Backup failed. Please try again.');
+    } finally {
+      setBackingUp(false);
+    }
   };
 
   if (loading) {
@@ -211,34 +206,29 @@ export default function SettingsPage() {
             <Database className="w-4 h-4 text-accent-dark" /> Database Utilities
           </h3>
 
-          <p className="text-xs text-slate-450 font-medium leading-relaxed">
-            Protect your salon logs by exporting periodic database checkpoints, or restore past schedules in case of server migrations.
+          <p className="text-sm text-slate-500 leading-relaxed">
+            Download all visits, customers, staff, services, attendance and salary payouts as one Excel file.
+            You'll get a reminder every 7 days.
           </p>
 
-          <div className="space-y-3 pt-2">
-            {/* Backup Button */}
-            <button
-              onClick={handleBackup}
-              className="w-full py-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-2xl transition flex items-center justify-center gap-2 text-xs"
-            >
-              <Database className="w-4 h-4 text-slate-500" />
-              Backup Collections (JSON)
-            </button>
-
-            {/* Restore Button */}
-            <button
-              onClick={handleRestore}
-              className="w-full py-3.5 bg-red-50 hover:bg-red-100/70 border border-red-100 text-red-650 font-bold rounded-2xl transition flex items-center justify-center gap-2 text-xs"
-            >
-              <RefreshCw className="w-4 h-4 text-red-400" />
-              Restore Database from JSON
-            </button>
+          <div className="p-4 bg-slate-50 rounded-2xl">
+            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last backup</span>
+            <span className="block text-sm font-bold text-slate-800 mt-1">
+              {lastBackupAt
+                ? `${new Date(lastBackupAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${daysSince(lastBackupAt) === 0 ? 'today' : `${daysSince(lastBackupAt)} days ago`}`
+                : 'Never'}
+            </span>
           </div>
 
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex gap-2 text-[10px] text-slate-450 leading-relaxed font-semibold">
-            <HelpCircle className="w-6 h-6 text-slate-400 shrink-0 mt-0.5" />
-            <span>Database backup files are formatted in raw JSON structures containing staff, services, customers, settings, and entry collections.</span>
-          </div>
+          <button
+            type="button"
+            onClick={handleBackup}
+            disabled={backingUp}
+            className="btn-primary w-full !py-3.5 text-sm font-bold disabled:opacity-60"
+          >
+            <Database className="w-4 h-4" />
+            {backingUp ? 'Preparing Excel file…' : 'Download Excel Backup'}
+          </button>
         </div>
 
       </div>

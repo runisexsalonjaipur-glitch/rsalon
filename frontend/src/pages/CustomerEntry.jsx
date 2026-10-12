@@ -13,7 +13,6 @@ import {
   Smartphone, 
   CreditCard,
   Layers,
-  Search,
   CheckSquare,
   Square,
   Clock
@@ -45,9 +44,7 @@ export default function CustomerEntry() {
   const [notes, setNotes] = useState('');
 
   // Service UI states
-  const [serviceSearch, setServiceSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [customServiceName, setCustomServiceName] = useState('');
   const [customServicePrice, setCustomServicePrice] = useState('');
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -240,14 +237,6 @@ export default function CustomerEntry() {
   // Categories list
   const categories = ['All', ...new Set(servicesList.map(s => s.category))];
 
-  // Filter services
-  const filteredServices = servicesList.filter(svc => {
-    const matchesSearch = svc.name.toLowerCase().includes(serviceSearch.toLowerCase()) || 
-                          svc.category.toLowerCase().includes(serviceSearch.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || svc.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
   // Handle saving entry
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -343,7 +332,7 @@ export default function CustomerEntry() {
   }
 
   return (
-    <div className="space-y-8 pb-24 lg:pb-8">
+    <div className="space-y-8 pb-20 lg:pb-8">
       <div>
         <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Customer Registration</h2>
         <p className="text-sm text-slate-500 font-medium">Record customer details, assign services, and finalize billing.</p>
@@ -466,95 +455,70 @@ export default function CustomerEntry() {
               <Scissors className="w-4 h-4 text-accent-dark" /> Select Salon Services
             </h3>
 
-            {/* Quick Add Popular Services Pills */}
-            <div className="space-y-2">
-              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quick Add popular services</span>
-              <div className="flex flex-wrap gap-2">
-                {servicesList.slice(0, 5).map(svc => {
-                  const existing = selectedServices.find(item => item.serviceId === svc._id);
+            {/* All services — always visible, grouped by category. Tap to add, tap again for qty +1 */}
+            <div className="space-y-3">
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-bold border transition-colors ${
+                      selectedCategory === cat
+                        ? 'cat-chip-active'
+                        : 'bg-white border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="service-grid max-h-[26rem] overflow-y-auto pr-1 space-y-4">
+                {(selectedCategory === 'All' ? categories.slice(1) : [selectedCategory]).map(cat => {
+                  const items = servicesList.filter(svc => svc.category === cat);
+                  if (items.length === 0) return null;
                   return (
-                    <button
-                      key={svc._id}
-                      type="button"
-                      onClick={() => toggleService(svc)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
-                        existing 
-                          ? 'bg-accent/15 border-accent text-accent-dark shadow-sm'
-                          : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                      }`}
-                    >
-                      + {svc.name.replace(/\(.*?\)/, '').trim()} (₹{svc.price})
-                      {existing && (
-                        <span className="bg-accent-dark text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ml-0.5">
-                          ×{existing.qty}
-                        </span>
-                      )}
-                    </button>
+                    <div key={cat}>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{cat}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {items.map(svc => {
+                          const existing = selectedServices.find(item => item.serviceId === svc._id);
+                          return (
+                            <div
+                              key={svc._id}
+                              className={`service-tile flex items-center justify-between gap-2 rounded-2xl border px-3.5 py-3 transition-colors ${
+                                existing ? 'is-selected' : 'border-slate-200'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => toggleService(svc)}
+                                className="flex-1 min-w-0 text-left"
+                              >
+                                <span className="block text-sm font-bold text-slate-800 truncate">{svc.name}</span>
+                                <span className="text-xs font-extrabold service-price">₹{svc.price}</span>
+                              </button>
+                              {existing ? (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button type="button" onClick={() => changeQty(svc._id, -1)} className="qty-btn" aria-label={`Remove one ${svc.name}`}>−</button>
+                                  <span className="w-6 text-center text-sm font-extrabold text-slate-800">{existing.qty}</span>
+                                  <button type="button" onClick={() => changeQty(svc._id, 1)} className="qty-btn" aria-label={`Add one more ${svc.name}`}>+</button>
+                                </div>
+                              ) : (
+                                <button type="button" onClick={() => toggleService(svc)} className="qty-btn shrink-0" aria-label={`Add ${svc.name}`}>+</button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
+                {servicesList.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-6">No services yet. Add them from the Services page.</p>
+                )}
               </div>
-            </div>
-
-            {/* Searchable Service Autocomplete Selector */}
-            <div className="relative pt-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Search & Add Services</label>
-              <div className="relative z-20">
-                <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-slate-400" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Type to search and add services..."
-                  value={serviceSearch}
-                  onChange={(e) => {
-                    setServiceSearch(e.target.value);
-                    setShowServiceDropdown(true);
-                  }}
-                  onFocus={() => setShowServiceDropdown(true)}
-                  className="form-input !pl-11 text-xs"
-                />
-              </div>
-
-              {/* Suggestions Dropdown */}
-              {showServiceDropdown && serviceSearch.trim().length > 0 && (
-                <>
-                  {/* Backdrop overlay to close dropdown */}
-                  <div 
-                    className="fixed inset-0 z-10" 
-                    onClick={() => setShowServiceDropdown(false)} 
-                  />
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-150 rounded-2xl shadow-xl z-20 max-h-56 overflow-y-auto divide-y divide-slate-50">
-                    {filteredServices.map(svc => {
-                      const isAdded = selectedServices.some(item => item.serviceId === svc._id);
-                      return (
-                        <button
-                          key={svc._id}
-                          type="button"
-                          onClick={() => {
-                            toggleService(svc);
-                            setServiceSearch('');
-                            setShowServiceDropdown(false);
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-slate-50 text-xs font-semibold text-slate-750 flex justify-between items-center"
-                        >
-                          <div>
-                            <span className="block font-bold text-slate-800">{svc.name}</span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{svc.category}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="font-extrabold text-slate-850">₹{svc.price}</span>
-                            {isAdded && (
-                              <span className="text-[9px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 font-bold">
-                                Added
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
             </div>
 
             {/* Custom Service Toggle */}
@@ -927,7 +891,7 @@ export default function CustomerEntry() {
           </div>
         {/* Floating Mobile Checkout Footer Bar */}
         {selectedServices.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200/50 p-4.5 shadow-[0_-8px_24px_rgba(251,191,36,0.12)] flex justify-between items-center lg:hidden">
+          <div className="checkout-bar fixed left-0 right-0 z-40 bg-white px-4 py-3 flex justify-between items-center lg:hidden">
             <div>
               <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Final Payable</span>
               <span className="text-base font-extrabold text-accent-dark">₹{finalAmount}</span>

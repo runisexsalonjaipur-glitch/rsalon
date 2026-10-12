@@ -82,7 +82,8 @@ const mongooseSettingsSchema = new mongoose.Schema({
   salonName: { type: String, default: 'R Unisex Salon' },
   logo: { type: String, default: '' },
   currency: { type: String, default: '₹' },
-  theme: { type: String, default: 'light' }
+  theme: { type: String, default: 'light' },
+  lastBackupAt: { type: Date } // set when the owner downloads the weekly Excel backup
 });
 
 const mongooseAttendanceSchema = new mongoose.Schema({

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, 
-  IndianRupee, 
+
   Percent, 
   TrendingUp, 
   Award, 
@@ -256,15 +256,20 @@ export default function Salaries() {
   const performanceMap = {};
   if (report && report.staffPerformance) {
     report.staffPerformance.forEach(st => {
-      performanceMap[st.name] = st;
+      // Match by staff id (names can repeat or change); name kept as fallback for older responses
+      if (st.staffId) performanceMap[st.staffId] = st;
+      else performanceMap[st.name] = st;
     });
   }
 
   let totalBaseSalary = 0;
   let totalCommissions = 0;
+  let paidAmount = 0;
+  let pendingAmount = 0;
+  let paidCount = 0;
 
   const staffPayouts = staff.map(st => {
-    const perf = performanceMap[st.name] || { revenue: 0, count: 0, totalBilled: 0 };
+    const perf = performanceMap[st._id] || performanceMap[st.name] || { revenue: 0, count: 0, totalBilled: 0 };
     const edits = salaryEdits[st._id] || { salary: st.salary || 0, commission: st.commission || 0 };
     
     const att = (report && report.attendanceSummary && report.attendanceSummary[st._id]) || { Present: 0, Absent: 0, Leave: 0 };
@@ -273,9 +278,10 @@ export default function Salaries() {
     const absentCount = att.Absent || 0;
     const totalWorkingDays = presentCount + leaveCount + absentCount;
     
-    const suggestedFixedBase = totalWorkingDays > 0 
-      ? Math.round(((st.salary || 0) * presentCount) / totalWorkingDays)
-      : (st.salary || 0);
+    // Base salary adjusted for attendance (present days / marked days). No attendance marked → full salary.
+    const suggestedFixedBase = totalWorkingDays > 0
+      ? Math.round((edits.salary * presentCount) / totalWorkingDays)
+      : edits.salary;
 
     const matchedPayout = (payoutHistory || []).find(p => {
       const pStaffId = p.staff?._id || p.staff;
@@ -284,10 +290,16 @@ export default function Salaries() {
     const isPaid = !!matchedPayout;
 
     const commissionVal = Math.round((perf.revenue * edits.commission) / 100);
-    const totalPayout = edits.salary + commissionVal;
-    
-    totalBaseSalary += edits.salary;
+    const totalPayout = suggestedFixedBase + commissionVal;
+
+    totalBaseSalary += suggestedFixedBase;
     totalCommissions += commissionVal;
+    if (isPaid) {
+      paidCount += 1;
+      paidAmount += matchedPayout.totalPaid || 0;
+    } else {
+      pendingAmount += totalPayout;
+    }
 
     return {
       ...st,
@@ -300,7 +312,8 @@ export default function Salaries() {
       leaveCount,
       absentCount,
       suggestedFixedBase,
-      isPaid
+      isPaid,
+      paidAmount: matchedPayout?.totalPaid || 0
     };
   });
 
@@ -372,41 +385,48 @@ export default function Salaries() {
             </label>
           </div>
 
-          {/* KPI Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-[28px] border border-slate-100/60 shadow-soft flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Base Salaries</span>
-                <span className="block text-2xl font-black text-slate-800">{formatAmt(totalBaseSalary)}</span>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center shadow-soft">
-                <Wallet className="w-6 h-6" />
-              </div>
+          {/* Month summary — what's owed, what's paid, what's left */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="bg-white p-4 md:p-5 rounded-[28px] shadow-soft">
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Payroll</span>
+              <span className="block text-xl md:text-2xl font-black text-slate-800 mt-1">{formatAmt(totalBaseSalary + totalCommissions)}</span>
+              <span className="block text-[11px] text-slate-500 mt-0.5">Base {formatAmt(totalBaseSalary)} + Comm. {formatAmt(totalCommissions)}</span>
             </div>
-
-            <div className="bg-white p-6 rounded-[28px] border border-slate-100/60 shadow-soft flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Commissions Billed</span>
-                <span className="block text-2xl font-black text-slate-800">{formatAmt(totalCommissions)}</span>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-soft">
-                <Coins className="w-6 h-6" />
-              </div>
+            <div className="bg-white p-4 md:p-5 rounded-[28px] shadow-soft">
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Still to Pay</span>
+              <span className="block text-xl md:text-2xl font-black text-pink-600 mt-1">{formatAmt(pendingAmount)}</span>
+              <span className="block text-[11px] text-slate-500 mt-0.5">{staffPayouts.length - paidCount} staff pending</span>
             </div>
-
-            <div className="bg-white p-6 rounded-[28px] border border-slate-100/60 shadow-soft flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Est. Monthly Payroll</span>
-                <span className="block text-2xl font-black text-slate-800">{formatAmt(totalBaseSalary + totalCommissions)}</span>
+            <div className="bg-white p-4 md:p-5 rounded-[28px] shadow-soft">
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Paid</span>
+              <span className="block text-xl md:text-2xl font-black text-emerald-600 mt-1">{formatAmt(paidAmount)}</span>
+              <span className="block text-[11px] text-slate-500 mt-0.5">{paidCount} of {staffPayouts.length} staff</span>
+            </div>
+            <div className="bg-white p-4 md:p-5 rounded-[28px] shadow-soft">
+              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Progress</span>
+              <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${staffPayouts.length ? Math.round((paidCount / staffPayouts.length) * 100) : 0}%` }}
+                />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-soft">
-                <IndianRupee className="w-6 h-6" />
-              </div>
+              <span className="block text-[11px] text-slate-500 mt-2">
+                {staffPayouts.length && paidCount === staffPayouts.length ? 'Everyone paid this month ✓' : `${staffPayouts.length ? Math.round((paidCount / staffPayouts.length) * 100) : 0}% complete`}
+              </span>
             </div>
           </div>
 
+          {visibleStaffPayouts.length === 0 && (
+            <div className="bg-white p-8 rounded-[28px] shadow-soft text-center">
+              <p className="text-sm font-bold text-slate-800">All staff are paid for this month 🎉</p>
+              <button type="button" onClick={() => setShowPaidStylists(true)} className="mt-2 text-xs font-bold text-pink-600">
+                Show paid staff
+              </button>
+            </div>
+          )}
+
           {/* Active Payroll: Desktop View Table */}
-          <div className="hidden md:block bg-white rounded-[28px] border border-slate-100/60 shadow-soft overflow-hidden">
+          <div className={`${visibleStaffPayouts.length === 0 ? 'hidden' : 'hidden md:block'} bg-white rounded-[28px] border border-slate-100/60 shadow-soft overflow-hidden`}>
             <div className="p-6 border-b border-slate-50">
               <h3 className="font-bold text-slate-800 text-sm">Staff Compensation Ledger</h3>
               <p className="text-xs text-slate-400">Configure parameters and record payroll payouts per stylist</p>
@@ -525,7 +545,7 @@ export default function Salaries() {
                                   const td = now.toISOString().slice(0, 10);
 
                                   setPayTargetStaff(st);
-                                  setPayBase(st.suggestedFixedBase || st.salary || 0);
+                                  setPayBase(st.suggestedFixedBase ?? st.salary ?? 0);
                                   setPayCommission(st.commissionEarned || 0);
                                   setPayStartDate(fd);
                                   setPayEndDate(td);
@@ -581,7 +601,7 @@ export default function Salaries() {
                             const td = now.toISOString().slice(0, 10);
 
                             setPayTargetStaff(st);
-                            setPayBase(st.suggestedFixedBase || st.salary || 0);
+                            setPayBase(st.suggestedFixedBase ?? st.salary ?? 0);
                             setPayCommission(st.commissionEarned || 0);
                             setPayStartDate(fd);
                             setPayEndDate(td);

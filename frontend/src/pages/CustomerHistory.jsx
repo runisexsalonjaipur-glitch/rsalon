@@ -35,7 +35,8 @@ export default function CustomerHistory() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(urlSearch);
-  const [dateFilter, setDateFilter] = useState('today'); // today, week, month, custom
+  // Searching from the top bar should find the customer across all time
+  const [dateFilter, setDateFilter] = useState(urlSearch ? 'all' : 'today'); // today, yesterday, 7days, month, last_month, all, custom
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -116,6 +117,7 @@ export default function CustomerHistory() {
   // Sync url search param with local search input
   useEffect(() => {
     setSearchQuery(urlSearch);
+    if (urlSearch) setDateFilter('all');
   }, [urlSearch]);
 
   const fetchRepeatCustomers = async () => {
@@ -181,7 +183,30 @@ export default function CustomerHistory() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setSearchParams({ search: searchQuery });
+    const q = searchQuery.trim();
+    setSearchParams(q ? { search: q } : {});
+    if (q) setDateFilter('all');
+    setPage(1);
+  };
+
+  const DATE_FILTERS = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: '7days', label: 'Last 7 Days' },
+    { value: 'month', label: 'This Month' },
+    { value: 'last_month', label: 'Last Month' },
+    { value: 'all', label: 'All Time' },
+    { value: 'custom', label: 'Custom' },
+  ];
+  const hasActiveFilters = staffFilter !== 'All' || serviceFilter !== 'All' || dateFilter !== 'today' || !!urlSearch;
+  const clearAllFilters = () => {
+    setStaffFilter('All');
+    setServiceFilter('All');
+    setDateFilter('today');
+    setStartDate('');
+    setEndDate('');
+    setSearchQuery('');
+    setSearchParams({});
     setPage(1);
   };
 
@@ -338,22 +363,22 @@ export default function CustomerHistory() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-100 dark:border-slate-700/60 pb-px">
+      <div className="flex border-b border-slate-100 pb-px overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab('all')}
-          className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${
+          className={`flex-1 sm:flex-none whitespace-nowrap px-3 sm:px-6 py-3 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'all'
               ? 'border-accent text-accent-dark'
               : 'border-transparent text-slate-400 hover:text-slate-600'
           }`}
         >
-          All Visits Log
+          All Visits
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('dues')}
-          className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${
+          className={`flex-1 sm:flex-none whitespace-nowrap px-3 sm:px-6 py-3 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'dues'
               ? 'border-accent text-accent-dark'
               : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -364,13 +389,13 @@ export default function CustomerHistory() {
         <button
           type="button"
           onClick={() => setActiveTab('repeat')}
-          className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${
+          className={`flex-1 sm:flex-none whitespace-nowrap px-3 sm:px-6 py-3 text-xs font-bold border-b-2 transition-all ${
             activeTab === 'repeat'
               ? 'border-accent text-accent-dark'
               : 'border-transparent text-slate-400 hover:text-slate-600'
           }`}
         >
-          Loyal / Repeat Customers
+          Repeat Customers
         </button>
       </div>
 
@@ -384,7 +409,7 @@ export default function CustomerHistory() {
                 <Search className="w-4 h-4 text-slate-400 absolute left-4 top-3.5" />
                 <input
                   type="text"
-                  placeholder="Search by customer name, phone, service, or payment..."
+                  placeholder="Search name or mobile number"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="form-input !pl-11"
@@ -396,14 +421,14 @@ export default function CustomerHistory() {
                 type="button"
                 onClick={() => setShowFilters(!showFilters)}
                 className={`p-3 rounded-xl border flex items-center justify-center gap-1.5 transition-all text-xs font-bold shrink-0 ${
-                  showFilters || staffFilter !== 'All' || serviceFilter !== 'All' || dateFilter !== 'today'
+                  showFilters || staffFilter !== 'All' || serviceFilter !== 'All'
                     ? 'bg-primary/10 border-primary text-primary'
                     : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <Filter className="w-4 h-4" />
                 <span className="hidden sm:inline">Filters</span>
-                {(staffFilter !== 'All' || serviceFilter !== 'All' || dateFilter !== 'today') && (
+                {(staffFilter !== 'All' || serviceFilter !== 'All') && (
                   <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                 )}
               </button>
@@ -421,27 +446,27 @@ export default function CustomerHistory() {
               )}
             </div>
 
+            {/* Date period chips — always visible (Pending Dues always covers all time) */}
+            {activeTab === 'all' && (
+              <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+                {DATE_FILTERS.map(f => (
+                  <button
+                    key={f.value}
+                    type="button"
+                    onClick={() => { setDateFilter(f.value); setPage(1); }}
+                    className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-bold border transition-colors ${
+                      dateFilter === f.value ? 'cat-chip-active' : 'bg-white border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Dropdown Filters Grid - Toggleable */}
             {showFilters && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-150 animate-fadeIn">
-                {/* Date Filter */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Date Period</label>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => {
-                      setDateFilter(e.target.value);
-                      setPage(1);
-                    }}
-                    className="form-input text-xs bg-white cursor-pointer font-semibold"
-                  >
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="custom">Custom Date Range...</option>
-                  </select>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-150 animate-fadeIn">
                 {/* Stylist Filter */}
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Filter Stylist</label>
@@ -481,8 +506,8 @@ export default function CustomerHistory() {
             )}
 
         {/* Custom date range inputs */}
-        {dateFilter === 'custom' && (
-          <form onSubmit={handleCustomDateSubmit} className="flex flex-wrap items-end gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+        {dateFilter === 'custom' && activeTab === 'all' && (
+          <form onSubmit={handleCustomDateSubmit} className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date</label>
               <input
@@ -509,6 +534,18 @@ export default function CustomerHistory() {
             </button>
           </form>
         )}
+
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <p className="text-xs font-semibold text-slate-500">
+                {loading ? 'Loading…' : `${totalEntries} ${totalEntries === 1 ? 'visit' : 'visits'} found`}
+                {urlSearch && <> for “<span className="text-slate-800">{urlSearch}</span>”</>}
+              </p>
+              {hasActiveFilters && (
+                <button type="button" onClick={clearAllFilters} className="text-xs font-bold text-pink-600 shrink-0">
+                  Clear filters
+                </button>
+              )}
+            </div>
       </div>
 
       {/* History List */}
