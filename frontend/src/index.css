@@ -100,35 +100,38 @@ main {
 }
 
 /* Bright, clean pink-white ambient background gradient */
-body, .bg-bg, .bg-slate-50 {
-  background: linear-gradient(135deg, #FFFDFD 0%, #FFF0F5 100%) !important; /* soft lavender blush */
+body, .bg-bg {
+  background: #FCF8FA !important; /* calm, flat blush-white */
   color: #1E293B;
+}
+.bg-slate-50 {
+  background: #FAF5F7 !important;
 }
 
 /* Sidebar background - Premium vertical pink-white fade */
 aside {
-  background: linear-gradient(to bottom, #FFFFFF 0%, #FFF5F7 100%) !important;
-  border-right: 1px solid #FBCFE8 !important; /* pink-200 */
+  background: #FFFFFF !important;
+  border-right: 1px solid #F5E6EE !important;
 }
 
 /* Top header background styling */
 header.glass-nav {
-  background: rgba(255, 253, 253, 0.8) !important;
-  border-bottom: 1px solid #FBCFE8 !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-bottom: 1px solid #F5E6EE !important;
 }
 
-/* Clean, premium card containers - Soft gradient from pure white to warm pink-white */
+/* Minimal card containers — flat white, hairline border, barely-there shadow */
 .bg-white, .bg-surface {
-  background: linear-gradient(135deg, #FFFFFF 75%, #FFF0F6 100%) !important;
-  border: none !important;
-  border-radius: 20px !important;
-  box-shadow: 0 10px 30px -5px rgba(244, 114, 182, 0.06), 0 4px 12px -2px rgba(244, 114, 182, 0.03) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #F5E6EE !important;
+  border-radius: 18px !important;
+  box-shadow: 0 1px 2px rgba(190, 24, 93, 0.04) !important;
 }
 
 /* Form input fields - Sleek pink outline */
 .form-input {
   background-color: #FFFFFF !important;
-  border: 1px solid #FBCFE8 !important;
+  border: 1px solid #EFDCE6 !important;
   color: #1E293B !important;
   border-radius: 12px !important;
   transition: all 0.25s ease-in-out !important;
@@ -141,9 +144,9 @@ header.glass-nav {
 
 /* Premium active active-nav-link highlights */
 .active-nav-link {
-  background: linear-gradient(135deg, rgba(244, 114, 182, 0.2) 0%, rgba(244, 114, 182, 0.05) 100%) !important;
+  background: #FDF0F6 !important;
   color: #DB2777 !important; /* pink-600 active text */
-  border-left: 4px solid #F472B6 !important;
+  border-left: 3px solid #DB2777 !important;
 }
 
 /* Sidebar navigation links hover override - Pink, no blue */
@@ -151,7 +154,7 @@ aside nav a:hover,
 aside nav a:focus,
 aside nav a:active,
 .mobile-nav-link:hover {
-  background: linear-gradient(135deg, rgba(244, 114, 182, 0.12) 0%, rgba(244, 114, 182, 0.04) 100%) !important;
+  background: #FDF4F8 !important;
   color: #DB2777 !important;
 }
 
@@ -162,7 +165,7 @@ aside nav a:hover svg,
 
 /* Elegant shadow utilities */
 .shadow-soft {
-  box-shadow: 0 10px 30px -5px rgba(244, 114, 182, 0.06), 0 4px 12px -2px rgba(244, 114, 182, 0.03) !important;
+  box-shadow: 0 1px 2px rgba(190, 24, 93, 0.04) !important;
 }
 
 /* Keep Brand Logo container clean white and high contrast */
@@ -187,7 +190,7 @@ aside nav a:hover svg,
 .text-slate-400, 
 p.text-slate-400, 
 span.text-slate-400 {
-  color: #DB2777 !important; /* pink-600 / rose-pink color for highlights */
+  color: #8A7F86 !important; /* warm muted grey for secondary text and icons */
 }
 
 .text-slate-500, 
@@ -195,13 +198,13 @@ span.text-slate-400 {
 .text-slate-650,
 p.text-slate-500,
 td.text-slate-600 {
-  color: #1E293B !important; /* highly visible slate-800 charcoal */
+  color: #4B4148 !important; /* readable warm charcoal */
 }
 
 /* Ensure placeholder text is warm pink-rose and visible */
 .form-input::placeholder {
-  color: #F472B6 !important;
-  opacity: 0.65 !important;
+  color: #B4A8AF !important;
+  opacity: 1 !important;
 }
 
 /* REDIRECT TAILWIND ACCENT/PRIMARY/AMBER THEME TO ROSE/PINK */
@@ -220,10 +223,11 @@ td.text-slate-600 {
 .btn-accent,
 button[type="submit"],
 .btn-primary {
-  background: linear-gradient(135deg, #DB2777 0%, #F472B6 100%) !important;
+  background: #DB2777 !important;
   color: #FFFFFF !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease !important;
   border: none !important;
+  box-shadow: 0 1px 2px rgba(190, 24, 93, 0.2) !important;
 }
 
 /* Hover fade only on devices that really hover — avoids "stuck" white buttons after a tap on phones */
@@ -232,10 +236,9 @@ button[type="submit"],
   .btn-accent:hover,
   button[type="submit"]:not(:disabled):hover,
   .btn-primary:hover {
-    background: linear-gradient(135deg, #F472B6 0%, #FFFFFF 100%) !important;
-    color: #DB2777 !important; /* text turns rose-pink for high-contrast visibility */
-    border: 1px solid #FBCFE8 !important;
-    box-shadow: 0 4px 15px rgba(219, 39, 119, 0.15) !important;
+    background: #BE185D !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 12px -2px rgba(190, 24, 93, 0.3) !important;
   }
 }
 
@@ -314,7 +317,7 @@ button, a, [role="button"] {
 }
 .bottom-tabbar .tab-pill.is-active { background: #FCE7F3; }
 .bottom-tabbar .tab-fab {
-  background: linear-gradient(135deg, #DB2777 0%, #F472B6 100%);
+  background: #DB2777;
   box-shadow: 0 8px 20px -6px rgba(219, 39, 119, 0.55);
   transition: transform 0.15s ease;
 }
@@ -387,5 +390,44 @@ button, a, [role="button"] {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Page transitions & loader */
+@keyframes pageEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.page-enter { animation: pageEnter 0.22s ease-out; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.page-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 3px solid #FCE7F3;
+  border-top-color: #DB2777;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Tables: calm header row, hairline dividers */
+main table thead th {
+  color: #8A7F86 !important;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+main table tbody tr { border-color: #F7EDF2 !important; }
+
+/* Mobile typography — tighter page headers, less noise */
+@media (max-width: 640px) {
+  main h2.text-2xl {
+    font-size: 1.3rem !important;
+    line-height: 1.6rem !important;
+  }
+  main h2.text-2xl + p {
+    font-size: 0.78rem !important;
+  }
+  main .rounded-\[28px\], main .rounded-\[32px\] {
+    border-radius: 18px !important;
+  }
+  /* Touch-friendly controls */
+  main select, main .form-input {
+    min-height: 42px;
   }
 }

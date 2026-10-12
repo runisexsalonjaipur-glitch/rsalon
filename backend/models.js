@@ -96,6 +96,14 @@ const mongooseAttendanceSchema = new mongoose.Schema({
 });
 mongooseAttendanceSchema.index({ staff: 1, date: 1 }, { unique: true });
 
+// Indexes for the hot query paths (date-range lists, per-staff reports, dues, customer history).
+// Additive only — building an index never modifies documents.
+mongooseEntrySchema.index({ createdAt: -1 });
+mongooseEntrySchema.index({ staff: 1, createdAt: -1 });
+mongooseEntrySchema.index({ customer: 1, createdAt: -1 });
+mongooseEntrySchema.index({ dueStatus: 1, createdAt: -1 });
+mongooseCustomerSchema.index({ name: 1 });
+
 const mongooseSalaryPayoutSchema = new mongoose.Schema({
   staff: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
   month: { type: String, required: true }, // YYYY-MM

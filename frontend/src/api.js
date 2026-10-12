@@ -21,7 +21,7 @@ export const getHeaders = () => {
   };
 };
 
-const apiCall = async (endpoint, options = {}) => {
+const request = async (endpoint, options = {}) => {
   const url = `${API_URL}${endpoint}`;
   const headers = getHeaders();
   
@@ -61,6 +61,41 @@ const apiCall = async (endpoint, options = {}) => {
     console.error(`API Error on ${endpoint}:`, error.message);
     throw error;
   }
+};
+
+// Short-lived GET cache + in-flight de-duplication.
+// Pages that request the same list (staff, services, settings) share one network call,
+// and revisiting a page within a few seconds is instant. Any write clears the cache.
+const GET_CACHE_TTL = 20 * 1000;
+const getCache = new Map();
+const inFlight = new Map();
+
+export const clearApiCache = () => {
+  getCache.clear();
+  inFlight.clear();
+};
+
+const apiCall = async (endpoint, options = {}) => {
+  const method = (options.method || 'GET').toUpperCase();
+
+  if (method !== 'GET') {
+    const data = await request(endpoint, options);
+    clearApiCache();
+    return data;
+  }
+
+  const cached = getCache.get(endpoint);
+  if (cached && Date.now() - cached.ts < GET_CACHE_TTL) return cached.data;
+  if (inFlight.has(endpoint)) return inFlight.get(endpoint);
+
+  const promise = request(endpoint, options)
+    .then((data) => {
+      getCache.set(endpoint, { data, ts: Date.now() });
+      return data;
+    })
+    .finally(() => inFlight.delete(endpoint));
+  inFlight.set(endpoint, promise);
+  return promise;
 };
 
 export default apiCall;

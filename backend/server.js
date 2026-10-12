@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
@@ -34,6 +35,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+app.use(compression()); // gzip JSON responses — much smaller payloads on mobile data
 app.use(express.json());
 
 // Default base route

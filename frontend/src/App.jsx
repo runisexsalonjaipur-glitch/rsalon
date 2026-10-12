@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { 
@@ -25,18 +25,35 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import CustomerEntry from './pages/CustomerEntry';
-import CustomerHistory from './pages/CustomerHistory';
-import Services from './pages/Services';
-import Staff from './pages/Staff';
-import Reports from './pages/Reports';
-import SettingsPage from './pages/Settings';
-import apiCall from './api';
+import apiCall, { clearApiCache } from './api';
 import logoImg from './assets/logo.png';
-import Salaries from './pages/Salaries';
-import StaffReport from './pages/StaffReport';
-import Attendance from './pages/Attendance';
+
+// Each page is downloaded only when first opened — much faster first load on mobile
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const CustomerEntry = lazy(() => import('./pages/CustomerEntry'));
+const CustomerHistory = lazy(() => import('./pages/CustomerHistory'));
+const Services = lazy(() => import('./pages/Services'));
+const Staff = lazy(() => import('./pages/Staff'));
+const Reports = lazy(() => import('./pages/Reports'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
+const Salaries = lazy(() => import('./pages/Salaries'));
+const StaffReport = lazy(() => import('./pages/StaffReport'));
+const Attendance = lazy(() => import('./pages/Attendance'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center py-24">
+    <span className="page-spinner" aria-label="Loading" />
+  </div>
+);
+
+const DEFAULT_SETTINGS = { salonName: 'R Unisex Salon', logo: '' };
+const readCachedSettings = () => {
+  try {
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('salon_settings') || '{}') };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+};
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -63,7 +80,7 @@ const DashboardLayout = ({ children }) => {
   const username = localStorage.getItem('username');
   
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [settings, setSettings] = useState({ salonName: 'R Unisex Salon', logo: '' });
+  const [settings, setSettings] = useState(readCachedSettings);
   const [searchQuery, setSearchQuery] = useState('');
 
 
@@ -73,6 +90,7 @@ const DashboardLayout = ({ children }) => {
       try {
         const res = await apiCall('/settings');
         setSettings(res);
+        try { localStorage.setItem('salon_settings', JSON.stringify(res)); } catch { /* storage full — ignore */ }
       } catch (err) {
         console.error(err);
       }
@@ -87,6 +105,7 @@ const DashboardLayout = ({ children }) => {
 
   const handleLogout = () => {
     localStorage.clear();
+    clearApiCache();
     toast.success('Logged out successfully');
     navigate('/login');
   };
@@ -328,7 +347,9 @@ const DashboardLayout = ({ children }) => {
 
         {/* Page Inner Container */}
         <main className="app-main flex-1 p-4 lg:p-6 overflow-y-auto overflow-x-hidden w-full mx-auto max-w-none">
-          {children}
+          <Suspense fallback={<PageLoader />}>
+            <div key={location.pathname} className="page-enter">{children}</div>
+          </Suspense>
         </main>
 
         {/* Mobile Bottom Tab Bar */}
